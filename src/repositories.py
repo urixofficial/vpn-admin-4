@@ -3,6 +3,7 @@ from typing import TypeVar, Generic, Type, List
 from pydantic import BaseModel
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from database import connection
 from dto import UserDTO, UserUpdateDTO
@@ -21,32 +22,40 @@ class AbstractRepository(Generic[DTO, ORM, DTOUpdate]):
 		self.update_dto_model = update_dto_model
 
 	@connection
-	async def add(self, dto: DTO, session: AsyncSession) -> None:
+	async def add(self, dto: DTO, session: AsyncSession) -> bool:
 		log.debug(f"Добавление записи: '{dto}' в таблицу '{self.orm_model.__tablename__}'")
-		orm_instance = self.orm_model(**dto.model_dump())
-		session.add(orm_instance)
-		await session.commit()
+		try:
+			orm_instance = self.orm_model(**dto.model_dump())
+			session.add(orm_instance)
+			await session.commit()
+			log.debug(f"OK")
+			return True
+		except IntegrityError as e:
+			log.error(f"Ошибка: запись с таким ключом уже существует")
+			return False
+		except Exception as e:
+			log.error(f"Ошибка: {e}")
+			return False
 
 	@connection
-	async def update(self, record_id: int, update_dto: DTOUpdate, session: AsyncSession) -> DTO | None:
+	async def update(self, record_id: int, update_dto: DTOUpdate, session: AsyncSession) -> DTO | bool:
 		log.debug(f"Обновление записи с ID={record_id}: в таблице '{self.orm_model.__tablename__}'")
-		# Получаем объект
-		# query = select(self.orm_model).where(self.orm_model.id == record_id)
-		# result = await session.execute(query)
-		# orm_object = result.scalar_one_or_none()
-		orm_object = await session.get_one(self.orm_model, record_id)
-		if not orm_object:
-			log.warning(f"Запись с ID={record_id} не найдена")
-			return None
-
-		# Обновляем только переданные поля
-		update_data = update_dto.model_dump(exclude_unset=True)
-		for key, value in update_data.items():
-			setattr(orm_object, key, value)
-
-		await session.commit()
-		await session.refresh(orm_object)
-		return self.dto_model.model_validate(orm_object)
+		try:
+			orm_object = await session.get_one(self.orm_model, record_id)
+			update_data = update_dto.model_dump(exclude_unset=True)
+			for key, value in update_data.items():
+				setattr(orm_object, key, value)
+			await session.commit()
+			await session.refresh(orm_object)
+			dto_object = self.dto_model.model_validate(orm_object)
+			log.debug("OK")
+			return dto_object
+		except NoResultFound as e:
+			log.error(f"Запись с ID={record_id} не найдена")
+			return False
+		except Exception as e:
+			log.error(f"Ошибка: {e}")
+			return False
 
 	@connection
 	async def delete(self, record_id: int, session: AsyncSession) -> bool:

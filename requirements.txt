@@ -1,5 +1,6 @@
 loguru
 pydantic
+pydantic_settings
 sqlalchemy
 aiosqlite
 greenlet
