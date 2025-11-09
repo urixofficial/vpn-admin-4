@@ -1,7 +1,7 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from logger import log
+from src.core.logger import log
 
 
 class Settings(BaseSettings):
@@ -13,6 +13,10 @@ class Settings(BaseSettings):
 
 	# Database
 	DB_PATH: str = Field(description="DSM-строка для доступа к базе данных")
+
+	# Telegram
+	TELEGRAM_TOKEN: str = Field(description="Telegram Token")
+	TELEGRAM_ADMIN_ID: int = Field(description="Admin ID")
 
 	model_config = SettingsConfigDict(env_file=".env")
 

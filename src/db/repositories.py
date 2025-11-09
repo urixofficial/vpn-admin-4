@@ -1,14 +1,14 @@
 from typing import TypeVar, Generic, Type, List
-
 from pydantic import BaseModel
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
-from database import connection
-from dto import UserDTO, UserUpdateDTO
-from logger import log
-from orm import Base, UserORM
+from src.core.logger import log
+
+from src.db.database import connection
+from src.core.dto import UserDTO, UserUpdateDTO
+from src.db.orm import Base, UserORM
 
 DTO = TypeVar('DTO', bound=BaseModel)
 ORM = TypeVar('ORM', bound=Base)
@@ -38,7 +38,7 @@ class AbstractRepository(Generic[DTO, ORM, DTOUpdate]):
 			return False
 
 	@connection
-	async def update(self, record_id: int, update_dto: DTOUpdate, session: AsyncSession) -> DTO | bool:
+	async def update(self, record_id: int, update_dto: DTOUpdate, session: AsyncSession) -> bool:
 		log.debug(f"Обновление записи с ID={record_id}: в таблице '{self.orm_model.__tablename__}'")
 		try:
 			orm_object = await session.get_one(self.orm_model, record_id)
@@ -47,9 +47,8 @@ class AbstractRepository(Generic[DTO, ORM, DTOUpdate]):
 				setattr(orm_object, key, value)
 			await session.commit()
 			await session.refresh(orm_object)
-			dto_object = self.dto_model.model_validate(orm_object)
 			log.debug("OK")
-			return dto_object
+			return True
 		except NoResultFound as e:
 			log.error(f"Запись с ID={record_id} не найдена")
 			return False
@@ -59,11 +58,16 @@ class AbstractRepository(Generic[DTO, ORM, DTOUpdate]):
 
 	@connection
 	async def delete(self, record_id: int, session: AsyncSession) -> bool:
-		log.debug(f"Удаление записи c ID={record_id} из таблицы: '{self.orm_model.__tablename__}'")
-		query = delete(self.orm_model).where(self.orm_model.id == record_id)
-		result = await session.execute(query)
-		await session.commit()
-		return result.rowcount > 0
+		try:
+			log.debug(f"Удаление записи c ID={record_id} из таблицы: '{self.orm_model.__tablename__}'")
+			query = delete(self.orm_model).where(self.orm_model.id == record_id)
+			result = await session.execute(query)
+			await session.commit()
+			log.debug("OK")
+			return result.rowcount > 0
+		except Exception as e:
+			log.error(f"Ошибка: {e}")
+			return False
 
 	@connection
 	async def get_all(self, session: AsyncSession) -> List[DTO] | None:

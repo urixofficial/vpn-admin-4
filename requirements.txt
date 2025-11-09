@@ -4,4 +4,4 @@ pydantic_settings
 sqlalchemy
 aiosqlite
 greenlet
-python-telegram-bot
+aiogram
