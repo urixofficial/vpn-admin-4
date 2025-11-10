@@ -41,7 +41,7 @@ class AbstractRepository(Generic[DTO, ORM, DTOUpdate]):
 	async def update(self, record_id: int, update_dto: DTOUpdate, session: AsyncSession) -> bool:
 		log.debug(f"Обновление записи с ID={record_id}: в таблице '{self.orm_model.__tablename__}'")
 		try:
-			orm_object = await session.get_one(self.orm_model, record_id)
+			orm_object = await session.get(self.orm_model, record_id)
 			update_data = update_dto.model_dump(exclude_unset=True)
 			for key, value in update_data.items():
 				setattr(orm_object, key, value)

@@ -80,10 +80,9 @@ async def check_user_id(message: Message, state: FSMContext):
 			await state.update_data(user_id=user_id)
 			await ask_name(message, state)
 		case "choose":
-			await state.clear()
 			if not user:
 				await message.answer(f"Пользователь с ID={user_id} не найден")
-
+				await state.clear()
 				return
 			await show_user_profile(message, state, user)
 
