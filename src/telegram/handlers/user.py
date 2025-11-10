@@ -8,9 +8,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 
-from src.core.config import settings
 from src.core.logger import log
 from src.db.repositories import user_repo
+from src.telegram.keyboards import register_keyboard
 
 router = Router(name="user_handler")
 
@@ -24,24 +24,20 @@ class RegisterStates(StatesGroup):
 async def cmd_start(message: Message, state: FSMContext):
 	user_id = message.from_user.id
 	log.info(f"Пользователь с ID={user_id} выполнил команду /start")
+
 	user = await user_repo.get_by_id(user_id)
 
 	if user:
-		status = "заблокирован" if user.blocked else "активен"
-		text = (
+		msg = (
 			f"Привет, {user.name}!\n"
-			f"Ваш статус: <b>{status}</b>\n"
-			f"Период: {user.billing_start_date} → {user.billing_end_date}"
+			f"Ваш статус: {user.status.value}\n"
+			f"Оплачено до: {user.billing_end_date}"
 		)
-		await message.answer(text, parse_mode="HTML")
+		await message.answer(msg, parse_mode="HTML")
 	else:
-		kb = InlineKeyboardMarkup(inline_keyboard=[
-			[InlineKeyboardButton(text="Зарегистрироваться", callback_data="register")]
-		])
 		await message.answer(
-			"Вы не зарегистрированы.\nОбратитесь к администратору."
-			# "Нажмите кнопку ниже, чтобы начать регистрацию.",
-			# reply_markup=kb
+			"Вы не зарегистрированы. Обратитесь к @urixofficial для регистрации.",
+			# reply_markup=register_keyboard()
 		)
 
 
@@ -53,7 +49,7 @@ async def cmd_start(message: Message, state: FSMContext):
 # 		parse_mode="HTML"
 # 	)
 # 	await state.set_state(RegisterStates.waiting_name)
-#
+
 #
 # @router.message(RegisterStates.waiting_name)
 # async def process_name(message: Message, state: FSMContext):

@@ -17,6 +17,7 @@ class Base(DeclarativeBase):
 
 		return f"<{self.__class__.__name__} {', '.join(cols)}>"
 
+
 class UserORM(Base):
 	__tablename__ = "users"
 
@@ -26,11 +27,12 @@ class UserORM(Base):
 	billing_end_date: Mapped[date] = mapped_column(default=date.today)
 	blocked: Mapped[bool] = mapped_column(default=False)
 
+
 class TransactionORM(Base):
 	__tablename__ = "transactions"
 
 	id: Mapped[int] = mapped_column(primary_key=True)
 	user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
 	amount: Mapped[int] = mapped_column()
-	created_at: Mapped[date] = mapped_column(default=datetime.now)
-	updated_at: Mapped[date] = mapped_column(default=datetime.now)
+	created: Mapped[date] = mapped_column(default=datetime.now)
+	updated: Mapped[date] = mapped_column(default=datetime.now)

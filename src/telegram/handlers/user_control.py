@@ -10,7 +10,7 @@ from src.core.dto import UserDTO, UserStatus
 from src.db.repositories import user_repo
 
 from src.telegram.keyboards import (cancel_keyboard, confirmation_keyboard,
-                                    to_user_control1_keyboard, user_profile_keyboard)
+                                    to_user_control_keyboard, user_profile_keyboard)
 
 
 router = Router(name="user_control_handler")
@@ -29,7 +29,7 @@ async def cb_user_list(callback: CallbackQuery):
 	users = await user_repo.get_all()
 	if not users:
 		await callback.answer()
-		await callback.message.edit_text("Нет пользователей.", reply_markup=to_user_control1_keyboard())
+		await callback.message.edit_text("Нет пользователей.", reply_markup=to_user_control_keyboard())
 		return
 
 	text = "Список пользователей:\n\n"
@@ -38,7 +38,7 @@ async def cb_user_list(callback: CallbackQuery):
 		text += f"{status} {user.name} ({user.id})\n"
 
 	await callback.answer()
-	await callback.message.edit_text(text, parse_mode="HTML", reply_markup=to_user_control1_keyboard())
+	await callback.message.edit_text(text, parse_mode="HTML", reply_markup=to_user_control_keyboard())
 
 
 # Запрос ID пользователя
@@ -50,7 +50,7 @@ async def cb_user_choose(callback: CallbackQuery, state: FSMContext):
 	await state.update_data(operation=operation)
 
 	await callback.answer()
-	await callback.message.edit_text("Введите ID пользователя:", reply_markup=to_user_control1_keyboard())
+	await callback.message.edit_text("Введите ID пользователя:", reply_markup=to_user_control_keyboard())
 	await state.set_state(UserControlStates.enter_id)
 
 
@@ -74,14 +74,14 @@ async def check_user_id(message: Message, state: FSMContext):
 	match operation:
 		case "add":
 			if user:
-				await message.answer(f"Пользователь с ID={user_id} уже существует", reply_markup=to_user_control1_keyboard())
+				await message.answer(f"Пользователь с ID={user_id} уже существует", reply_markup=to_user_control_keyboard())
 				await state.clear()
 				return
 			await state.update_data(user_id=user_id)
 			await ask_name(message, state)
 		case "choose":
 			if not user:
-				await message.answer(f"Пользователь с ID={user_id} не найден", reply_markup=to_user_control1_keyboard())
+				await message.answer(f"Пользователь с ID={user_id} не найден", reply_markup=to_user_control_keyboard())
 				await state.clear()
 				return
 			await show_user_profile(message, state, user)
@@ -120,6 +120,9 @@ async def check_name(message: Message, state: FSMContext):
 	if not name:
 		await message.answer("Имя не может быть пустым. Введите имя пользователя:",
 		                     reply_markup=cancel_keyboard())
+	if len(name) > 25:
+		await message.answer("Имя должно быть не длиннее 25 символов. Введите имя пользователя:",
+		                     reply_markup=cancel_keyboard())
 
 	# Чтение данных
 	data = await state.get_data()
@@ -146,7 +149,7 @@ async def check_name(message: Message, state: FSMContext):
 		msg = (f"<b>{user.name}</b> ({user.id})\n"
 		       f"{'-' * 40}\n"
 		       f"❌ Ошибка при добавлении пользователя.")
-	await message.answer(msg, parse_mode="HTML", reply_markup=to_user_control1_keyboard())
+	await message.answer(msg, parse_mode="HTML", reply_markup=to_user_control_keyboard())
 
 
 # Запрос подтверждения на удаление
@@ -188,7 +191,7 @@ async def confirmation_approved(callback: CallbackQuery, state: FSMContext):
 		       f"❌ Ошибка при удалении пользователя.")
 
 	await callback.answer()
-	await callback.message.edit_text(msg, reply_markup=to_user_control1_keyboard(), parse_mode="HTML")
+	await callback.message.edit_text(msg, reply_markup=to_user_control_keyboard(), parse_mode="HTML")
 	await state.clear()
 
 

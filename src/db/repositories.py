@@ -7,8 +7,8 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from src.core.logger import log
 
 from src.db.database import connection
-from src.core.dto import UserDTO, UserUpdateDTO
-from src.db.orm import Base, UserORM
+from src.core.dto import UserDTO, UserUpdateDTO, TransactionDTO, TransactionUpdateDTO
+from src.db.orm import Base, UserORM, TransactionORM
 
 DTO = TypeVar('DTO', bound=BaseModel)
 ORM = TypeVar('ORM', bound=Base)
@@ -94,4 +94,10 @@ class UserRepository(AbstractRepository[UserDTO, UserORM, UserUpdateDTO]):
 		super().__init__(UserDTO, UserORM, UserUpdateDTO)
 
 
+class BillingRepository(AbstractRepository[TransactionDTO, TransactionORM, TransactionUpdateDTO]):
+	def __init__(self):
+		super().__init__(TransactionDTO, TransactionORM, TransactionUpdateDTO)
+
+
 user_repo = UserRepository()
+billing_repo = BillingRepository()

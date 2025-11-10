@@ -3,7 +3,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from src.core.config import settings
 from src.core.logger import log
-from src.telegram.handlers import user_router, admin_router, user_control_router
+from src.telegram.handlers import user_router, admin_router, user_control_router, billing_control_router
 
 
 class TelegramBot:
@@ -20,6 +20,7 @@ class TelegramBot:
 		self.dp.include_router(user_router)
 		self.dp.include_router(admin_router)
 		self.dp.include_router(user_control_router)
+		self.dp.include_router(billing_control_router)
 
 	async def start_polling(self):
 		log.info("Запуск Telegram-бота в режиме polling...")

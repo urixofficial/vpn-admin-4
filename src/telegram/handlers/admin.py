@@ -8,7 +8,9 @@ from src.core.dto import UserStatus
 from src.core.logger import log
 from src.db.repositories import user_repo
 
-from src.telegram.keyboards import admin_panel_keyboard, user_control_keyboard
+from src.telegram.keyboards import (admin_panel_keyboard, user_control_keyboard, billing_control_keyboard,
+                                    to_admin_panel_keyboard)
+
 
 router = Router(name="admin_handler")
 
@@ -24,10 +26,10 @@ async def cb_cancel(callback: CallbackQuery, state: FSMContext):
 
 	await callback.answer()
 	await state.clear()
-	await callback.message.edit_text("Действие отменено")
+	await callback.message.edit_text("Действие отменено", reply_markup=to_admin_panel_keyboard())
 
 
-# Вывод панели администратора - команда
+# Вывод панели администратора
 @router.message(Command("admin"))
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel(update: Message | CallbackQuery):
@@ -51,6 +53,15 @@ async def cb_user_control(callback: CallbackQuery):
 
 	await callback.answer()
 	await callback.message.edit_text("Управление пользователями:", reply_markup=user_control_keyboard())
+
+
+# Вывод панели управления транзакциями
+@router.callback_query(F.data == "billing_control")
+async def cb_billing_control(callback: CallbackQuery):
+	log.debug("Вывод управления биллингом")
+
+	await callback.answer()
+	await callback.message.edit_text("Управление биллингом:", reply_markup=billing_control_keyboard())
 
 
 # Вывод системной статистики
@@ -77,4 +88,4 @@ async def cb_system_stats(callback: CallbackQuery):
 			f"❌ Заблокированных: {blocked}\n")
 
 	await callback.answer()
-	await callback.message.edit_text(stats)
+	await callback.message.edit_text(stats, reply_markup=to_admin_panel_keyboard())

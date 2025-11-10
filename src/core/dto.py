@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import date
+from datetime import datetime, date
 from enum import Enum
 
 
@@ -33,5 +33,24 @@ class UserUpdateDTO(BaseModel):
 	billing_start_date: date | None = None
 	billing_end_date: date | None = None
 	blocked: bool | None = None
+
+	model_config = ConfigDict(from_attributes=True)
+
+
+class TransactionDTO(BaseModel):
+	id: int
+	user_id: int
+	amount: int
+	created: datetime
+	updated: datetime
+
+	model_config = ConfigDict(from_attributes=True)
+
+
+class TransactionUpdateDTO(BaseModel):
+	user_id: int | None = None
+	amount: int | None = None
+	created: datetime | None = None
+	updated: datetime | None = None
 
 	model_config = ConfigDict(from_attributes=True)
