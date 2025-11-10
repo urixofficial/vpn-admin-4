@@ -74,14 +74,14 @@ async def check_user_id(message: Message, state: FSMContext):
 	match operation:
 		case "add":
 			if user:
-				await message.answer(f"Пользователь с ID={user_id} уже существует")
+				await message.answer(f"Пользователь с ID={user_id} уже существует", reply_markup=to_user_control1_keyboard())
 				await state.clear()
 				return
 			await state.update_data(user_id=user_id)
 			await ask_name(message, state)
 		case "choose":
 			if not user:
-				await message.answer(f"Пользователь с ID={user_id} не найден")
+				await message.answer(f"Пользователь с ID={user_id} не найден", reply_markup=to_user_control1_keyboard())
 				await state.clear()
 				return
 			await show_user_profile(message, state, user)
