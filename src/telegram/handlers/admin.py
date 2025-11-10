@@ -1,45 +1,80 @@
-from datetime import date
-
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-	Message, InlineKeyboardMarkup, InlineKeyboardButton,
-	CallbackQuery
-)
+from aiogram.types import Message, CallbackQuery
 
 from src.core.config import settings
+from src.core.dto import UserStatus
 from src.core.logger import log
+from src.db.repositories import user_repo
 
-from src.telegram.keyboards import (cancel_keyboard, admin_panel_keyboard, user_control_keyboard,
-                                    confirmation_keyboard, to_user_control_keyboard)
+from src.telegram.keyboards import admin_panel_keyboard, user_control_keyboard
 
 router = Router(name="admin_handler")
 
 
-def is_admin(message: Message) -> bool:
-	return message.from_user.id == settings.TELEGRAM_ADMIN_ID
+def is_admin(obj: Message | CallbackQuery) -> bool:
+	return obj.from_user.id == settings.TELEGRAM_ADMIN_ID
 
+
+# Отмена текущего действия
 @router.callback_query(F.data == "cancel")
-async def cancel_handler(callback: CallbackQuery, state: FSMContext):
-	log.debug("Отмена операции")
+async def cb_cancel(callback: CallbackQuery, state: FSMContext):
+	log.debug("Отмена действия")
+
 	await callback.answer()
 	await state.clear()
-	await callback.message.edit_text("Действие отменено", reply_markup=to_user_control_keyboard())
+	await callback.message.edit_text("Действие отменено")
 
 
+# Вывод панели администратора - команда
 @router.message(Command("admin"))
-async def admin_panel(message: Message):
+@router.callback_query(F.data == "admin_panel")
+async def admin_panel(update: Message | CallbackQuery):
 	log.debug("Вывод панели администратора")
-	if not is_admin(message):
-		await message.answer("Доступ запрещён.")
+
+	if not is_admin(update):
+		await update.answer("Доступ запрещён.")
 		return
-	await message.answer("Панель администратора:", reply_markup=admin_panel_keyboard())
+
+	if isinstance(update, Message):
+		await update.answer("Панель администратора:", reply_markup=admin_panel_keyboard())
+	elif isinstance(update, CallbackQuery):
+		await update.answer()
+		await update.message.edit_text("Панель администратора:", reply_markup=admin_panel_keyboard())
 
 
+# Вывод панели управления пользователями
 @router.callback_query(F.data == "user_control")
 async def cb_user_control(callback: CallbackQuery):
 	log.debug("Вывод управления пользователями")
+
 	await callback.answer()
 	await callback.message.edit_text("Управление пользователями:", reply_markup=user_control_keyboard())
 
+
+# Вывод системной статистики
+@router.callback_query(F.data == "system_stats")
+async def cb_system_stats(callback: CallbackQuery):
+	log.debug("Вывод системной статистики")
+
+	users = await user_repo.get_all()
+
+	active, expired, blocked = 0, 0, 0
+	for user in users:
+		match user.status:
+			case UserStatus.BLOCKED:
+				blocked += 1
+			case UserStatus.ACTIVE:
+				active +=1
+			case UserStatus.EXPIRED:
+				expired +=1
+
+	stats =(f"Системная статистика:\n\n"
+	        f"👤 Всего пользователей: {len(users)}\n"
+	        f"✅ Активных: {active}\n"
+			f"⌛ Просроченных: {expired}\n"
+			f"❌ Заблокированных: {blocked}\n")
+
+	await callback.answer()
+	await callback.message.edit_text(stats)

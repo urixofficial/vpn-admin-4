@@ -10,7 +10,7 @@ def cancel_keyboard():
 		]
 	)
 
-def to_user_control_keyboard():
+def to_user_control1_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
@@ -33,13 +33,13 @@ def admin_panel_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
-				InlineKeyboardButton(text="Пользователи", callback_data="user_control")
+				InlineKeyboardButton(text="👤 Пользователи", callback_data="user_control")
 			],
 			[
-				InlineKeyboardButton(text="Транзакции", callback_data="transaction_control")
+				InlineKeyboardButton(text="💰 Транзакции", callback_data="transaction_control")
 			],
 			[
-				InlineKeyboardButton(text="Статистика", callback_data="system_stats")
+				InlineKeyboardButton(text="📊 Статистика", callback_data="system_stats")
 			]
 		]
 	)
@@ -48,16 +48,34 @@ def user_control_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
-				InlineKeyboardButton(text="Список", callback_data="user_list"),
-				InlineKeyboardButton(text="Инфо", callback_data="user_info")
+				InlineKeyboardButton(text="📋 Список пользователей", callback_data="user_list"),
 			],
 			[
-				InlineKeyboardButton(text="Добавить", callback_data="user_add"),
-				InlineKeyboardButton(text="Изменить", callback_data="user_edit"),
-				InlineKeyboardButton(text="Удалить", callback_data="user_delete")
+				InlineKeyboardButton(text="🔍️ Показать профиль", callback_data="user_choose")
 			],
 			[
-				InlineKeyboardButton(text="Назад", callback_data="admin_panel")
+				InlineKeyboardButton(text="➕ Добавить нового", callback_data="user_add"),
+			],
+			[
+				InlineKeyboardButton(text="🔙 Назад", callback_data="admin_panel")
+			]
+
+		]
+	)
+
+def user_profile_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text="✏️ Изменить", callback_data="user_edit"),
+				InlineKeyboardButton(text="❌ Удалить", callback_data="user_delete")
+			],
+			[
+				InlineKeyboardButton(text="🚫 Заблокировать", callback_data="user_block"),
+				InlineKeyboardButton(text="✅ Разблокировать", callback_data="user_unblock"),
+			],
+			[
+				InlineKeyboardButton(text="🔙 Назад", callback_data="user_control")
 			]
 
 		]

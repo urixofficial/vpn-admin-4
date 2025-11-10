@@ -4,9 +4,9 @@ from enum import Enum
 
 
 class UserStatus(Enum):
-	ACTIVE = "active"
-	EXPIRED = "expired"
-	BLOCKED = "blocked"
+	ACTIVE = "Активен"
+	EXPIRED = "Просрочен"
+	BLOCKED = "Заблокирован"
 
 class UserDTO(BaseModel):
 	id: int
