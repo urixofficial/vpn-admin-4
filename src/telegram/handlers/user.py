@@ -23,7 +23,7 @@ class RegisterStates(StatesGroup):
 	waiting_confirm = State()
 
 
-# ОБработка команды /start
+# Обработка команды /start
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
 	user_id = message.from_user.id
@@ -45,7 +45,7 @@ async def welcome_message(message: Message):
 			f"Ваш статус: {user.status.value}\n"
 			f"Оплачено до: {user.billing_end_date}"
 		)
-		await message.answer(msg, parse_mode="HTML")
+		await message.answer(msg)
 	else:
 		await message.answer(
 			"Вы не зарегистрированы.",
@@ -71,7 +71,6 @@ async def ask_name(callback: CallbackQuery, state: FSMContext):
 	await callback.answer()
 	await callback.message.edit_text(
 		"Введите ваше имя или псевдоним:",
-		parse_mode="HTML",
 		reply_markup=user_cancel_keyboard()
 	)
 	await state.set_state(RegisterStates.waiting_name)
@@ -104,7 +103,7 @@ async def check_name(message: Message, state: FSMContext):
 		f"🛎️ Отправить запрос администратору?"
 	)
 
-	await message.answer(msg, parse_mode="HTML", reply_markup=user_confirmation_keyboard())
+	await message.answer(msg, reply_markup=user_confirmation_keyboard())
 	await state.set_state(RegisterStates.waiting_confirm)
 
 
@@ -146,8 +145,7 @@ async def cb_confirm_registration(callback: CallbackQuery, state: FSMContext):
 		await callback.bot.send_message(
 			chat_id=settings.TELEGRAM_ADMIN_ID,
 			text=msg,
-			reply_markup=keyboard,
-			parse_mode="HTML"
+			reply_markup=keyboard
 		)
 		log.debug(f"Запрос на регистрацию от {name} ({user_id}) отправлен администратору")
 		await callback.message.edit_text("Запрос отправлен администратору. Ожидайте.")

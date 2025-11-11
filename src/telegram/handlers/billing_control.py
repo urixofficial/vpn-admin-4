@@ -42,7 +42,7 @@ async def cb_tx_list(callback: CallbackQuery):
 		msg += f"<code>{transaction.id:03d} | {transaction.amount: 5d} | {user.name}\n</code>"
 
 	await callback.answer()
-	await callback.message.edit_text(msg, parse_mode="HTML", reply_markup=to_billing_control_keyboard())
+	await callback.message.edit_text(msg, reply_markup=to_billing_control_keyboard())
 
 
 # Запрос ID пользователя
@@ -143,7 +143,7 @@ async def check_amount_save_to_db(message: Message, state: FSMContext):
 			f"</code>"
 		)
 
-	await message.answer(msg, parse_mode="HTML", reply_markup=to_billing_control_keyboard())
+	await message.answer(msg, reply_markup=to_billing_control_keyboard())
 
 
 # Изменение транзакции
@@ -200,7 +200,7 @@ async def check_tx_id(message: Message, state: FSMContext):
 	)
 
 	# Запрос подтверждения
-	await message.answer(msg, parse_mode="HTML", reply_markup=admin_confirmation_keyboard())
+	await message.answer(msg, reply_markup=admin_confirmation_keyboard())
 	await state.set_state(BillingControlStates.confirm)
 
 

@@ -33,13 +33,13 @@ async def cb_user_list(callback: CallbackQuery):
 		await callback.message.edit_text("Нет пользователей.", reply_markup=to_user_control_keyboard())
 		return
 
-	text = "Список пользователей:\n\n"
+	msg = "Список пользователей:\n\n"
 	for user in users:
 		status = "✅" if user.status == UserStatus.ACTIVE else "❌"
-		text += f"{status} {user.name} ({user.id})\n"
+		msg += f"{status} {user.name} ({user.id})\n"
 
 	await callback.answer()
-	await callback.message.edit_text(text, parse_mode="HTML", reply_markup=to_user_control_keyboard())
+	await callback.message.edit_text(msg, reply_markup=to_user_control_keyboard())
 
 
 # Запрос ID пользователя
@@ -98,7 +98,7 @@ async def show_user_profile(message: Message, state: FSMContext, user: UserDTO):
 	        f"<code>Начало: | {user.billing_start_date}</code>\n"
 	        f"<code>Конец:  | {user.billing_end_date}</code>\n")
 
-	await message.answer(info, reply_markup=user_profile_keyboard(), parse_mode="HTML")
+	await message.answer(info, reply_markup=user_profile_keyboard())
 	await state.update_data(user_id=user.id)
 
 
@@ -150,7 +150,7 @@ async def check_name(message: Message, state: FSMContext):
 		msg = (f"<b>{user.name}</b> ({user.id})\n"
 		       f"{'-' * 40}\n"
 		       f"❌ Ошибка при добавлении пользователя.")
-	await message.answer(msg, parse_mode="HTML", reply_markup=to_user_control_keyboard())
+	await message.answer(msg, reply_markup=to_user_control_keyboard())
 
 
 # Запрос подтверждения на удаление
@@ -192,7 +192,7 @@ async def confirmation_approved(callback: CallbackQuery, state: FSMContext):
 		       f"❌ Ошибка при удалении пользователя.")
 
 	await callback.answer()
-	await callback.message.edit_text(msg, reply_markup=to_user_control_keyboard(), parse_mode="HTML")
+	await callback.message.edit_text(msg, reply_markup=to_user_control_keyboard())
 	await state.clear()
 
 
@@ -238,11 +238,11 @@ async def reject_registration(callback: CallbackQuery):
 	user_id = int(callback.data.split("_")[-1])
 	log.debug(f"Админ отклонил регистрацию пользователя {user_id}")
 
-	msg = "Администратор отклонил ваш запрос."
+	msg = "❌ Администратор отклонил ваш запрос."
 
 	await callback.answer("Отклонено")
 	await callback.bot.send_message(chat_id=user_id, text=msg)
-	await callback.message.edit_text(f"Регистрация пользователя {user_id} отклонена.", reply_markup=None)
+	await callback.message.edit_text(f"❌ Регистрация пользователя {user_id} отклонена.", reply_markup=None)
 
 
 # Редактирование пользователя

@@ -1,5 +1,6 @@
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.enums import ParseMode
 
 from src.core.config import settings
 from src.core.logger import log
@@ -9,7 +10,7 @@ from src.telegram.handlers import user_router, admin_router, user_control_router
 class TelegramBot:
 	def __init__(self):
 		log.debug("Инициализация Telegram-бота")
-		self.bot = Bot(token=settings.TELEGRAM_TOKEN)
+		self.bot = Bot(token=settings.TELEGRAM_TOKEN, parse_mode=ParseMode.HTML)
 		self.dp = Dispatcher(storage=MemoryStorage())
 		self.admin_id = settings.TELEGRAM_ADMIN_ID
 
