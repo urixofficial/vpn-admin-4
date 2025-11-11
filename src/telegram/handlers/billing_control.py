@@ -8,9 +8,13 @@ from aiogram.types import Message, CallbackQuery
 from src.core.logger import log
 from src.core.dto import UserDTO, UserStatus, TransactionAddDTO, TransactionDTO
 from src.db.repositories import user_repo, billing_repo
+from src.telegram.interface import TX_LIST_EMPTY, TX_LIST_HEADER, TX_LINE_TEMPLATE, ENTER_USER_ID, USER_ID_NOT_NUMBER, \
+	USER_NOT_FOUND, ENTER_AMOUNT, AMOUNT_INVALID, AMOUNT_INVALID_RULE, TX_ADDED_SUCCESS, TX_ADDED_ERROR, FEATURE_IN_DEV, \
+	ENTER_TX_ID, TX_ID_NOT_NUMBER, TX_ID_NOT_POSITIVE, TX_NOT_FOUND, TX_DELETE_CONFIRM, TX_DELETED_SUCCESS, \
+	TX_DELETED_ERROR
 
 from src.telegram.keyboards import (admin_cancel_keyboard, admin_confirmation_keyboard,
-                                    to_billing_control_keyboard, user_profile_keyboard)
+                                    to_billing_control_keyboard)
 
 
 router = Router(name="billing_control_handler")
@@ -30,16 +34,14 @@ async def cb_tx_list(callback: CallbackQuery):
 	transactions = await billing_repo.get_all()
 	if not transactions:
 		await callback.answer()
-		await callback.message.edit_text("Нет транзакций.", reply_markup=to_billing_control_keyboard())
+		await callback.message.edit_text(TX_LIST_EMPTY, reply_markup=to_billing_control_keyboard())
 		return
 
-	msg = (f"Список транзакций:\n\n"
-	       f"<code>{'-' * 35}\n</code>"
-	       f"<code> id | Сумма | Пользователь\n</code>"
-	       f"<code>{'-' * 35}\n</code>")
-	for transaction in transactions:
-		user = await user_repo.get_by_id(transaction.user_id)
-		msg += f"<code>{transaction.id:03d} | {transaction.amount: 5d} | {user.name}\n</code>"
+	msg = TX_LIST_HEADER
+
+	for tx in transactions:
+		user = await user_repo.get_by_id(tx.user_id)
+		msg += TX_LINE_TEMPLATE.format(tx_id=tx.id, amount=tx.amount, name=user.name)
 
 	await callback.answer()
 	await callback.message.edit_text(msg, reply_markup=to_billing_control_keyboard())
@@ -51,7 +53,7 @@ async def ask_user_id(callback: CallbackQuery, state: FSMContext):
 	log.debug("Запрос ID пользователя")
 
 	await callback.answer()
-	await callback.message.edit_text("Введите ID пользователя:", reply_markup=to_billing_control_keyboard())
+	await callback.message.edit_text(ENTER_USER_ID, reply_markup=to_billing_control_keyboard())
 	await state.set_state(BillingControlStates.enter_user_id)
 
 
@@ -64,13 +66,13 @@ async def check_user_id(message: Message, state: FSMContext):
 	try:
 		user_id = int(message.text)
 	except ValueError:
-		await message.answer("ID должен быть числом. Введите ID пользователя:")
+		await message.answer(USER_ID_NOT_NUMBER)
 		return
 
 	# Проверка наличия пользователя в базе данных
 	user = await user_repo.get_by_id(user_id)
 	if not user:
-		await message.answer(f"Пользователь с ID={user_id} не найден", reply_markup=to_billing_control_keyboard())
+		await message.answer(USER_NOT_FOUND.format(user_id=user_id), reply_markup=to_billing_control_keyboard())
 		await state.clear()
 		return
 
@@ -83,7 +85,7 @@ async def check_user_id(message: Message, state: FSMContext):
 async def ask_amount(message: Message, state: FSMContext):
 	log.debug("Запрос суммы транзакции")
 
-	await message.answer("Введите сумму транзакции", reply_markup=admin_cancel_keyboard())
+	await message.answer(ENTER_AMOUNT, reply_markup=admin_cancel_keyboard())
 	await state.set_state(BillingControlStates.enter_amount)
 
 
@@ -96,12 +98,12 @@ async def check_amount_save_to_db(message: Message, state: FSMContext):
 	try:
 		amount = int(message.text)
 	except ValueError:
-		await message.answer("Сумма должна быть целым числом.\nВведите сумму транзакции:",
+		await message.answer(AMOUNT_INVALID,
 		                     reply_markup=admin_cancel_keyboard())
 		return
 
 	if amount <= 0 or amount % 100 != 0:
-		await message.answer("Сумма должна быть больше нуля и кратна 100 рублям.\nВведите сумму транзакции:",
+		await message.answer(AMOUNT_INVALID_RULE,
 		                     reply_markup=admin_cancel_keyboard())
 		return
 
@@ -122,25 +124,17 @@ async def check_amount_save_to_db(message: Message, state: FSMContext):
 	transaction_id = await billing_repo.add(transaction)
 	if transaction_id is not None:
 		log.info(f"Транзакция успешно добавлена в базу данных")
-		msg = (
-			f"<code>"
-			f" id | Сумма | Пользователь\n"
-			f"{'-' * 35}\n"
-			f"{transaction_id:03d} | {transaction.amount: 5d} | {user.name}\n"
-			f"{'-' * 35}\n"
-			f"✅ Транзакция успешно добавлена."
-			f"</code>"
+		msg = TX_ADDED_SUCCESS.format(
+			tx_id=transaction_id,
+			amount=amount,
+			name=user.name
 		)
 	else:
 		log.error(f"Ошибка при добавлении транзакции в базу данных")
-		msg = (
-			f"<code>"
-			f" id | Сумма | Пользователь\n"
-			f"{'-' * 35}\n"
-			f"{transaction_id:03d} | {transaction.amount: 5d} | {user.name}\n"
-			f"{'-' * 35}\n"
-			f"❌ Ошибка при добавлении транзакции."
-			f"</code>"
+		msg = TX_ADDED_ERROR.format(
+			tx_id=transaction_id,
+			amount=amount,
+			name=user.name
 		)
 
 	await message.answer(msg, reply_markup=to_billing_control_keyboard())
@@ -151,7 +145,7 @@ async def check_amount_save_to_db(message: Message, state: FSMContext):
 async def tx_edit(callback: CallbackQuery, state: FSMContext):
 	log.debug("Обновление транзакции")
 
-	await callback.answer("Функция в разработке")
+	await callback.answer(FEATURE_IN_DEV)
 
 
 # Удаление транзакции
@@ -160,7 +154,7 @@ async def tx_delete_ask_tx_id(callback: CallbackQuery, state: FSMContext):
 	log.debug("Запрос ID транзакции")
 
 	await callback.answer()
-	await callback.message.edit_text("Введите ID транзакции:", reply_markup=admin_cancel_keyboard())
+	await callback.message.edit_text(ENTER_TX_ID, reply_markup=admin_cancel_keyboard())
 	await state.set_state(BillingControlStates.enter_tx_id)
 
 
@@ -171,32 +165,28 @@ async def check_tx_id(message: Message, state: FSMContext):
 
 	# Валидация ID
 	try:
-		transaction_id = int(message.text)
+		tx_id = int(message.text)
 	except ValueError:
-		await message.answer("ID должен быть целым числом. Введите ID транзакции:", reply_markup=admin_cancel_keyboard())
+		await message.answer(TX_ID_NOT_NUMBER, reply_markup=admin_cancel_keyboard())
 		return
 
-	if transaction_id <= 0:
-		await message.answer("ID должен положительным числом. Введите ID транзакции:", reply_markup=admin_cancel_keyboard())
+	if tx_id <= 0:
+		await message.answer(TX_ID_NOT_POSITIVE, reply_markup=admin_cancel_keyboard())
 		return
 
-	transaction = await billing_repo.get_by_id(transaction_id)
+	transaction = await billing_repo.get_by_id(tx_id)
 	if not transaction:
 		await state.clear()
-		await message.answer(f"Транзакция с ID={transaction_id} не найдена.", reply_markup=to_billing_control_keyboard())
+		await message.answer(TX_NOT_FOUND.format(tx_id=tx_id), reply_markup=to_billing_control_keyboard())
 		return
 
-	await state.update_data(transaction_id=transaction_id)
+	await state.update_data(transaction_id=tx_id)
 	user = await user_repo.get_by_id(transaction.user_id)
 
-	msg = (
-		f"<code>"
-		f" id | Сумма | Пользователь\n"
-		f"{'-' * 35}\n"
-		f"{transaction_id:03d} | {transaction.amount: 5d} | {user.name}\n"
-		f"{'-' * 35}\n"
-		f"❌ Удалить транзакцию?"
-		f"</code>"
+	msg = TX_DELETE_CONFIRM.format(
+		tx_id=tx_id,
+		amount=transaction.amount,
+		name=user.name
 	)
 
 	# Запрос подтверждения
@@ -210,14 +200,14 @@ async def deleting_tx_from_db(callback: CallbackQuery, state: FSMContext):
 	log.debug("Подтверждение удаления транзакции получено")
 
 	data = await state.get_data()
-	transaction_id = data["transaction_id"]
+	tx_id = data["transaction_id"]
 
-	success = await billing_repo.delete(transaction_id)
+	success = await billing_repo.delete(tx_id)
 	if success:
-		status = f"Транзакция с ID={transaction_id} успешно удалена"
+		status = TX_DELETED_SUCCESS.format(tx_id=tx_id)
 		log.debug(status)
 	else:
-		status = f"Ошибка при удалении транзакции с ID={transaction_id}"
+		status = TX_DELETED_ERROR.format(tx_id=tx_id)
 		log.error(status)
 
 	await callback.answer()

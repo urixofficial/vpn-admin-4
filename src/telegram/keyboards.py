@@ -103,25 +103,7 @@ def user_control_keyboard():
 				InlineKeyboardButton(text="➕ Добавить нового", callback_data="user_add"),
 			],
 			[
-				InlineKeyboardButton(text="🔙 Назад", callback_data="admin_panel")
-			]
-
-		]
-	)
-
-def user_profile_keyboard():
-	return InlineKeyboardMarkup(
-		inline_keyboard=[
-			[
-				InlineKeyboardButton(text="✏️ Изменить", callback_data="user_edit"),
-				InlineKeyboardButton(text="❌ Удалить", callback_data="user_delete")
-			],
-			# [
-			# 	InlineKeyboardButton(text="🚫 Заблокировать", callback_data="user_block"),
-			# 	InlineKeyboardButton(text="✅ Разблокировать", callback_data="user_unblock"),
-			# ],
-			[
-				InlineKeyboardButton(text="🔙 Назад", callback_data="user_control")
+				InlineKeyboardButton(text="🔙 На главную", callback_data="admin_panel")
 			]
 
 		]
@@ -135,7 +117,7 @@ def billing_control_keyboard():
 			],
 			[
 				InlineKeyboardButton(text="➕️ Добавить", callback_data="tx_add"),
-				InlineKeyboardButton(text="✏️ Изменить", callback_data="tx_edit"),
+				# InlineKeyboardButton(text="✏️ Изменить", callback_data="tx_edit"),
 				InlineKeyboardButton(text="❌ Удалить", callback_data="tx_delete")
 			],
 			[
