@@ -6,11 +6,11 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
 
 from src.core.logger import log
-from src.core.dto import UserDTO, UserStatus
-from src.db.repositories import user_repo
+from src.core.dto import UserAddDTO, UserDTO, UserStatus
+from src.db.repositories import user_repo, registration_repo
 
-from src.telegram.keyboards import (cancel_keyboard, confirmation_keyboard,
-                                    to_user_control_keyboard, user_profile_keyboard)
+from src.telegram.keyboards import (admin_cancel_keyboard, admin_confirmation_keyboard,
+                                    to_user_control_keyboard, user_profile_keyboard, to_user_panel_keyboard)
 
 
 router = Router(name="user_control_handler")
@@ -19,6 +19,7 @@ class UserControlStates(StatesGroup):
 	enter_id = State()
 	enter_name = State()
 	confirm = State()
+	registration_confirm = State()
 
 
 # Вывод списка пользователей
@@ -106,7 +107,7 @@ async def ask_name(message: Message, state: FSMContext):
 	log.debug("Запрос имени пользователя")
 
 	# Отправка сообщения с запросом имени
-	await message.answer("Введите имя пользователя", reply_markup=cancel_keyboard())
+	await message.answer("Введите имя пользователя", reply_markup=admin_cancel_keyboard())
 	await state.set_state(UserControlStates.enter_name)
 
 
@@ -119,10 +120,10 @@ async def check_name(message: Message, state: FSMContext):
 	name = message.text.strip()
 	if not name:
 		await message.answer("Имя не может быть пустым. Введите имя пользователя:",
-		                     reply_markup=cancel_keyboard())
+		                     reply_markup=admin_cancel_keyboard())
 	if len(name) > 25:
 		await message.answer("Имя должно быть не длиннее 25 символов. Введите имя пользователя:",
-		                     reply_markup=cancel_keyboard())
+		                     reply_markup=admin_cancel_keyboard())
 
 	# Чтение данных
 	data = await state.get_data()
@@ -164,12 +165,12 @@ async def ask_confirmation(callback: CallbackQuery, state: FSMContext):
 
 	# Отправка сообщения с запросом подтверждения
 	await callback.answer()
-	await callback.message.edit_text(f"Удалить пользователя {user.name}?", reply_markup=confirmation_keyboard())
+	await callback.message.edit_text(f"Удалить пользователя {user.name}?", reply_markup=admin_confirmation_keyboard())
 	await state.set_state(UserControlStates.confirm)
 
 
 # Подтверждение получено
-@router.callback_query(UserControlStates.confirm, F.data == "ok")
+@router.callback_query(UserControlStates.confirm, F.data == "admin_ok")
 async def confirmation_approved(callback: CallbackQuery, state: FSMContext):
 	log.debug("Подтверждение получено")
 
@@ -193,6 +194,55 @@ async def confirmation_approved(callback: CallbackQuery, state: FSMContext):
 	await callback.answer()
 	await callback.message.edit_text(msg, reply_markup=to_user_control_keyboard(), parse_mode="HTML")
 	await state.clear()
+
+
+# Регистрация подтверждена. Внесение пользователя в базу
+@router.callback_query(F.data.startswith("registration_approve_"))
+async def approve_registration(callback: CallbackQuery):
+	user_id = int(callback.data.split("_")[-1])
+	log.debug(f"Админ одобрил регистрацию пользователя {user_id}")
+
+	registration_dto = await registration_repo.get_by_id(user_id)
+	if not registration_dto:
+		log.error(f"Ошибка: не найдена запись c ID={user_id} в таблице ожидания регистрации")
+		return
+
+	user = UserAddDTO(
+		id=user_id,
+		name=registration_dto.name,
+		billing_start_date=date.today(),
+		billing_end_date=date.today(),
+		blocked=False
+	)
+
+	success = await user_repo.add(user)
+
+	if success:
+		user_msg = "✅ Подтверждение получено. Вы успешно зарегистрированы!"
+		admin_msg = "✅ Пользователь успешно добавлен."
+		log.info(f"Пользователь {user.name} ({user.id}) успешно зарегистрирован.")
+	else:
+		user_msg = "❌ Подтверждение получено, но возникла ошибка при регистрации."
+		admin_msg = "❌ Ошибка добавления пользователя в базу."
+		log.error(f"Ошибка при добавлении пользователя {user.name} ({user.id})")
+
+	await registration_repo.delete(user_id)
+	await callback.answer("Одобрено")
+	await callback.message.edit_text(admin_msg, reply_markup=None)
+	await callback.bot.send_message(chat_id=user_id, text=user_msg)
+
+
+# Регистрация отклонена
+@router.callback_query(F.data.startswith("registration_reject_"))
+async def reject_registration(callback: CallbackQuery):
+	user_id = int(callback.data.split("_")[-1])
+	log.debug(f"Админ отклонил регистрацию пользователя {user_id}")
+
+	msg = "Администратор отклонил ваш запрос."
+
+	await callback.answer("Отклонено")
+	await callback.bot.send_message(chat_id=user_id, text=msg)
+	await callback.message.edit_text(f"Регистрация пользователя {user_id} отклонена.", reply_markup=None)
 
 
 # Редактирование пользователя

@@ -1,7 +1,7 @@
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
 
-def register_keyboard():
+def user_register_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
@@ -10,11 +10,20 @@ def register_keyboard():
 		]
 	)
 
-def cancel_keyboard():
+def admin_cancel_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
-				InlineKeyboardButton(text="Отмена", callback_data="cancel"),
+				InlineKeyboardButton(text="Отмена", callback_data="admin_cancel"),
+			]
+		]
+	)
+
+def user_cancel_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text="Отмена", callback_data="user_cancel"),
 			]
 		]
 	)
@@ -46,12 +55,22 @@ def to_billing_control_keyboard():
 		]
 	)
 
-def confirmation_keyboard():
+def admin_confirmation_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
-				InlineKeyboardButton(text="OK", callback_data="ok"),
-				InlineKeyboardButton(text="Отмена", callback_data="cancel")
+				InlineKeyboardButton(text="OK", callback_data="admin_ok"),
+				InlineKeyboardButton(text="Отмена", callback_data="admin_cancel")
+			]
+		]
+	)
+
+def user_confirmation_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text="OK", callback_data="user_ok"),
+				InlineKeyboardButton(text="Отмена", callback_data="user_cancel")
 			]
 		]
 	)
@@ -123,5 +142,14 @@ def billing_control_keyboard():
 				InlineKeyboardButton(text="🔙 Назад", callback_data="admin_panel")
 			]
 
+		]
+	)
+
+def to_user_panel_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text="Панель пользователя", callback_data="user_panel"),
+			]
 		]
 	)

@@ -21,7 +21,7 @@ class Base(DeclarativeBase):
 class UserORM(Base):
 	__tablename__ = "users"
 
-	id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+	id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
 	name: Mapped[str] = mapped_column(String(25))
 	billing_start_date: Mapped[date] = mapped_column(default=date.today)
 	billing_end_date: Mapped[date] = mapped_column(default=date.today)
@@ -31,8 +31,16 @@ class UserORM(Base):
 class TransactionORM(Base):
 	__tablename__ = "transactions"
 
-	id: Mapped[int] = mapped_column(primary_key=True)
+	id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 	user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
 	amount: Mapped[int] = mapped_column()
-	created: Mapped[date] = mapped_column(default=datetime.now)
-	updated: Mapped[date] = mapped_column(default=datetime.now)
+	created_at: Mapped[date] = mapped_column(default=datetime.now)
+	updated_at: Mapped[date] = mapped_column(default=datetime.now)
+
+
+class RegistrationORM(Base):
+	__tablename__ = "registration"
+
+	id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+	name: Mapped[str] = mapped_column(String(25))
+	requested_at: Mapped[datetime] = mapped_column(default=datetime.now)

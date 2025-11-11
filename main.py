@@ -8,7 +8,7 @@ from src.telegram.bot import telegram_bot
 
 
 async def main():
-	log.debug(f"Запуск {settings.APP_NAME} v{settings.APP_VERSION}")
+	log.info(f"Запуск {settings.APP_NAME} v{settings.APP_VERSION}")
 
 	# Инициализация БД
 	await init_db()

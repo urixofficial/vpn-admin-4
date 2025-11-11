@@ -6,7 +6,7 @@ from aiogram.types import Message, CallbackQuery
 from src.core.config import settings
 from src.core.dto import UserStatus
 from src.core.logger import log
-from src.db.repositories import user_repo
+from src.db.repositories import user_repo, billing_repo
 
 from src.telegram.keyboards import (admin_panel_keyboard, user_control_keyboard, billing_control_keyboard,
                                     to_admin_panel_keyboard)
@@ -20,7 +20,7 @@ def is_admin(obj: Message | CallbackQuery) -> bool:
 
 
 # Отмена текущего действия
-@router.callback_query(F.data == "cancel")
+@router.callback_query(F.data == "admin_cancel")
 async def cb_cancel(callback: CallbackQuery, state: FSMContext):
 	log.debug("Отмена действия")
 
@@ -69,23 +69,34 @@ async def cb_billing_control(callback: CallbackQuery):
 async def cb_system_stats(callback: CallbackQuery):
 	log.debug("Вывод системной статистики")
 
-	users = await user_repo.get_all()
+	users_total, active, expired, blocked = 0, 0, 0, 0
 
-	active, expired, blocked = 0, 0, 0
-	for user in users:
-		match user.status:
-			case UserStatus.BLOCKED:
-				blocked += 1
-			case UserStatus.ACTIVE:
-				active +=1
-			case UserStatus.EXPIRED:
-				expired +=1
+	users = await user_repo.get_all()
+	if users:
+		users_total = len(users)
+		for user in users:
+			match user.status:
+				case UserStatus.BLOCKED:
+					blocked += 1
+				case UserStatus.ACTIVE:
+					active +=1
+				case UserStatus.EXPIRED:
+					expired +=1
+
+	tx_total_count, tx_total_amount = 0, 0
+
+	transactions = await billing_repo.get_all()
+	if transactions:
+		tx_total_count = len(transactions)
+		tx_total_amount = sum([tx.amount for tx in transactions])
 
 	stats =(f"Системная статистика:\n\n"
-	        f"👤 Всего пользователей: {len(users)}\n"
+	        f"👤 Всего пользователей: {users_total}\n"
 	        f"✅ Активных: {active}\n"
 			f"⌛ Просроченных: {expired}\n"
-			f"❌ Заблокированных: {blocked}\n")
+			f"❌ Заблокированных: {blocked}\n\n"
+			f"📋 Всего транзакций: {tx_total_count}\n"
+			f"💰 Сумма транзакций: {tx_total_amount}")
 
 	await callback.answer()
 	await callback.message.edit_text(stats, reply_markup=to_admin_panel_keyboard())

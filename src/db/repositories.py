@@ -1,41 +1,46 @@
 from typing import TypeVar, Generic, Type, List
 from pydantic import BaseModel
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, Update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from src.core.logger import log
 
 from src.db.database import connection
-from src.core.dto import UserDTO, UserUpdateDTO, TransactionDTO, TransactionUpdateDTO
-from src.db.orm import Base, UserORM, TransactionORM
+from src.core.dto import (UserAddDTO, UserDTO, UserUpdateDTO, TransactionAddDTO, TransactionDTO, TransactionUpdateDTO,
+                          RegistrationAddDTO, RegistrationDTO, RegistrationUpdateDTO)
+from src.db.orm import Base, UserORM, TransactionORM, RegistrationORM
 
+AddDTO = TypeVar('AddDTO', bound=BaseModel)
 DTO = TypeVar('DTO', bound=BaseModel)
-ORM = TypeVar('ORM', bound=Base)
 DTOUpdate = TypeVar('DTOUpdate', bound=BaseModel)
+ORM = TypeVar('ORM', bound=Base)
 
 
-class AbstractRepository(Generic[DTO, ORM, DTOUpdate]):
-	def __init__(self, dto_model: Type[DTO], orm_model: Type[ORM], update_dto_model: Type[DTOUpdate]):
+class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
+	def __init__(self, add_dto_model: Type[DTO], dto_model: Type[DTO], update_dto_model: Type[DTOUpdate], orm_model: Type[ORM]):
+		self.add_dto_model = add_dto_model
 		self.dto_model = dto_model
-		self.orm_model = orm_model
 		self.update_dto_model = update_dto_model
+		self.orm_model = orm_model
+
 
 	@connection
-	async def add(self, dto: DTO, session: AsyncSession) -> bool:
+	async def add(self, dto: AddDTO, session: AsyncSession) -> int | None:
 		log.debug(f"Добавление записи: '{dto}' в таблицу '{self.orm_model.__tablename__}'")
 		try:
 			orm_instance = self.orm_model(**dto.model_dump())
 			session.add(orm_instance)
+			await session.flush()  # Получаем ID без коммита
 			await session.commit()
-			log.debug(f"OK")
-			return True
+			log.debug(f"OK, добавлен ID: {orm_instance.id}")
+			return orm_instance.id
 		except IntegrityError as e:
 			log.error(f"Ошибка: запись с таким ключом уже существует")
-			return False
+			return None
 		except Exception as e:
 			log.error(f"Ошибка: {e}")
-			return False
+			return None
 
 	@connection
 	async def update(self, record_id: int, update_dto: DTOUpdate, session: AsyncSession) -> bool:
@@ -89,15 +94,22 @@ class AbstractRepository(Generic[DTO, ORM, DTOUpdate]):
 		return dto_object
 
 
-class UserRepository(AbstractRepository[UserDTO, UserORM, UserUpdateDTO]):
+class UserRepository(AbstractRepository[UserAddDTO, UserDTO, UserUpdateDTO, UserORM]):
 	def __init__(self):
-		super().__init__(UserDTO, UserORM, UserUpdateDTO)
+		super().__init__(UserAddDTO, UserDTO, UserUpdateDTO, UserORM)
 
 
-class BillingRepository(AbstractRepository[TransactionDTO, TransactionORM, TransactionUpdateDTO]):
+class BillingRepository(AbstractRepository[TransactionAddDTO, TransactionDTO, TransactionUpdateDTO, TransactionORM]):
 	def __init__(self):
-		super().__init__(TransactionDTO, TransactionORM, TransactionUpdateDTO)
+		super().__init__(TransactionAddDTO, TransactionDTO, TransactionUpdateDTO, TransactionORM)
+
+
+class RegistrationRepo(AbstractRepository[RegistrationAddDTO, RegistrationDTO, RegistrationUpdateDTO, RegistrationORM]):
+	def __init__(self):
+		super().__init__(RegistrationAddDTO, RegistrationDTO, RegistrationUpdateDTO, RegistrationORM)
+
 
 
 user_repo = UserRepository()
 billing_repo = BillingRepository()
+registration_repo = RegistrationRepo()

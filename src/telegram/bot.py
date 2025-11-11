@@ -14,13 +14,13 @@ class TelegramBot:
 		self.admin_id = settings.TELEGRAM_ADMIN_ID
 
 		self._register_handlers()
-		log.debug("OK")
 
 	def _register_handlers(self):
-		self.dp.include_router(user_router)
+
 		self.dp.include_router(admin_router)
 		self.dp.include_router(user_control_router)
 		self.dp.include_router(billing_control_router)
+		self.dp.include_router(user_router)
 
 	async def start_polling(self):
 		log.info("Запуск Telegram-бота в режиме polling...")
