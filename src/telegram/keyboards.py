@@ -1,5 +1,8 @@
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from src.telegram.interface import ADD_BUTTON, EDIT_BUTTON, DELETE_BUTTON, BACK_BUTTON
 
+
+# === Клавиатуры пользователя ===
 
 def user_register_keyboard():
 	return InlineKeyboardMarkup(
@@ -10,20 +13,41 @@ def user_register_keyboard():
 		]
 	)
 
-def admin_cancel_keyboard():
-	return InlineKeyboardMarkup(
-		inline_keyboard=[
-			[
-				InlineKeyboardButton(text="Отмена", callback_data="admin_cancel"),
-			]
-		]
-	)
-
 def user_cancel_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
 				InlineKeyboardButton(text="Отмена", callback_data="user_cancel"),
+			]
+		]
+	)
+
+def to_user_panel_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text="Панель пользователя", callback_data="user_panel"),
+			]
+		]
+	)
+
+def user_confirmation_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text="OK", callback_data="user_ok"),
+				InlineKeyboardButton(text="Отмена", callback_data="user_cancel")
+			]
+		]
+	)
+
+# === Клавиатуры админа ===
+
+def admin_cancel_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text="Отмена", callback_data="admin_cancel"),
 			]
 		]
 	)
@@ -65,16 +89,6 @@ def admin_confirmation_keyboard():
 		]
 	)
 
-def user_confirmation_keyboard():
-	return InlineKeyboardMarkup(
-		inline_keyboard=[
-			[
-				InlineKeyboardButton(text="OK", callback_data="user_ok"),
-				InlineKeyboardButton(text="Отмена", callback_data="user_cancel")
-			]
-		]
-	)
-
 def admin_panel_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
@@ -97,13 +111,27 @@ def user_control_keyboard():
 				InlineKeyboardButton(text="📋 Список пользователей", callback_data="user_list"),
 			],
 			[
-				InlineKeyboardButton(text="🔍️ Показать профиль", callback_data="user_choose")
+				InlineKeyboardButton(text="🔍️ Показать профиль", callback_data="user_show")
 			],
 			[
 				InlineKeyboardButton(text="➕ Добавить нового", callback_data="user_add"),
 			],
 			[
 				InlineKeyboardButton(text="🔙 На главную", callback_data="admin_panel")
+			]
+
+		]
+	)
+
+def user_profile_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				# InlineKeyboardButton(text=EDIT_BUTTON, callback_data=f"edit_user_{user.id}"),
+				InlineKeyboardButton(text=DELETE_BUTTON, callback_data=f"user_delete")
+			],
+			[
+				InlineKeyboardButton(text=BACK_BUTTON, callback_data="user_control")
 			]
 
 		]
@@ -116,9 +144,10 @@ def billing_control_keyboard():
 				InlineKeyboardButton(text="📋 Список транзакций", callback_data="tx_list"),
 			],
 			[
+				InlineKeyboardButton(text="📋 Показать профиль", callback_data="tx_show"),
+			],
+			[
 				InlineKeyboardButton(text="➕️ Добавить", callback_data="tx_add"),
-				# InlineKeyboardButton(text="✏️ Изменить", callback_data="tx_edit"),
-				InlineKeyboardButton(text="❌ Удалить", callback_data="tx_delete")
 			],
 			[
 				InlineKeyboardButton(text="🔙 Назад", callback_data="admin_panel")
@@ -127,11 +156,15 @@ def billing_control_keyboard():
 		]
 	)
 
-def to_user_panel_keyboard():
+def tx_profile_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
-				InlineKeyboardButton(text="Панель пользователя", callback_data="user_panel"),
+				InlineKeyboardButton(text=DELETE_BUTTON, callback_data=f"tx_delete")
+			],
+			[
+				InlineKeyboardButton(text=BACK_BUTTON, callback_data="billing_control")
 			]
+
 		]
 	)

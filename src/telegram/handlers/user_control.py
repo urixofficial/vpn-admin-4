@@ -15,16 +15,16 @@ from src.telegram.interface import USER_LIST_HEADER, USER_LIST_ROW, USER_LIST_ST
 	REG_REJECTED_USER, REG_REJECTED_ADMIN, USER_LIST_EMPTY
 
 from src.telegram.keyboards import (admin_cancel_keyboard, admin_confirmation_keyboard,
-                                    to_user_control_keyboard, to_user_panel_keyboard)
+                                    to_user_control_keyboard, user_profile_keyboard)
 
 
 router = Router(name="user_control_handler")
 
 class UserControlStates(StatesGroup):
-	enter_id = State()
-	enter_name = State()
-	confirm = State()
-	registration_confirm = State()
+	enter_user_id = State()
+	enter_user_name = State()
+	confirm_user_delete = State()
+	confirm_registration = State()
 
 
 # Вывод списка пользователей
@@ -51,21 +51,42 @@ async def cb_user_list(callback: CallbackQuery):
 	await callback.message.edit_text(msg, reply_markup=to_user_control_keyboard())
 
 
+# Вывод профиля пользователя
+async def show_user_info(message: Message, state: FSMContext, user: UserDTO):
+	log.debug(f"Вывод профиля пользователя {user.name} ({user.id})")
+
+	user_profile = USER_PROFILE_TEMPLATE.format(
+		user_id=user.id,
+		name=user.name,
+		status=user.status.value,
+		start_date=user.billing_start_date,
+		end_date=user.billing_end_date,
+		sep=SEP
+	)
+
+	await message.answer(user_profile, reply_markup=user_profile_keyboard())
+	await state.update_data(user_id=user.id) # для передачи ID в хэндлеры CRUD-операций
+
+
+# =====================================================================================================================
+# ================================================ CRUD ===============================================================
+# =====================================================================================================================
+
 # Запрос ID пользователя
-@router.callback_query(F.data.in_({"user_choose", "user_add"}))
-async def cb_user_choose(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data.in_({"user_show", "user_add"}))
+async def ask_user_id(callback: CallbackQuery, state: FSMContext):
 	log.debug("Запрос ID пользователя")
 
-	operation = callback.data.split("_")[1] # choose or add
+	operation = callback.data.split("_")[1] # show or add
 	await state.update_data(operation=operation)
 
 	await callback.answer()
 	await callback.message.edit_text(ENTER_USER_ID, reply_markup=to_user_control_keyboard())
-	await state.set_state(UserControlStates.enter_id)
+	await state.set_state(UserControlStates.enter_user_id)
 
 
 # Проверка ID и выбор следующего шага
-@router.message(UserControlStates.enter_id)
+@router.message(UserControlStates.enter_user_id)
 async def check_user_id(message: Message, state: FSMContext):
 	log.debug("Проверка ID пользователя")
 
@@ -84,71 +105,39 @@ async def check_user_id(message: Message, state: FSMContext):
 	match operation:
 		case "add":
 			if user:
-				await message.answer(USER_EXISTS.format(user_id=user_id), reply_markup=to_user_control_keyboard())
+				await message.answer(USER_EXISTS, reply_markup=to_user_control_keyboard())
 				await state.clear()
 				return
 			await state.update_data(user_id=user_id)
 			await ask_name(message, state)
-		case "choose":
+		case "show":
 			if not user:
-				await message.answer(USER_NOT_FOUND.format(user_id=user_id), reply_markup=to_user_control_keyboard())
+				await message.answer(USER_NOT_FOUND, reply_markup=to_user_control_keyboard())
 				await state.clear()
 				return
-			await show_user_profile(message, state, user)
+			await show_user_info(message, state, user)
 
 
-# Вывести профиль пользователя
-async def show_user_profile(message: Message, state: FSMContext, user: UserDTO):
-	log.debug(f"Вывод профиля пользователя {user.name} ({user.id})")
-
-	user_profile = USER_PROFILE_TEMPLATE.format(
-		user_id=user.id,
-		name=user.name,
-		status=user.status.value,
-		start_date=user.billing_start_date,
-		end_date=user.billing_end_date,
-		sep=SEP
-	)
-
-	keyboard = InlineKeyboardMarkup(
-		inline_keyboard=[
-			[
-				# InlineKeyboardButton(text=EDIT_BUTTON, callback_data=f"edit_user_{user.id}"),
-				InlineKeyboardButton(text=DELETE_BUTTON, callback_data=f"delete_user_{user.id}")
-			],
-			[
-				InlineKeyboardButton(text=BACK_BUTTON, callback_data="user_control")
-			]
-
-		]
-	)
-
-	await message.answer(user_profile, reply_markup=keyboard)
-	await state.update_data(user_id=user.id)
-
-
-# Запрос имени
+# Запрос имени пользователя
 async def ask_name(message: Message, state: FSMContext):
 	log.debug("Запрос имени пользователя")
 
 	# Отправка сообщения с запросом имени
 	await message.answer(ENTER_NAME, reply_markup=admin_cancel_keyboard())
-	await state.set_state(UserControlStates.enter_name)
+	await state.set_state(UserControlStates.enter_user_name)
 
 
 # Проверка имени и добавление в базу
-@router.message(UserControlStates.enter_name)
+@router.message(UserControlStates.enter_user_name)
 async def check_name(message: Message, state: FSMContext):
 	log.debug("Проверка имени пользователя")
 
 	# Валидация имени
 	name = message.text.strip()
 	if not name:
-		await message.answer(NAME_EMPTY,
-		                     reply_markup=admin_cancel_keyboard())
+		await message.answer(NAME_EMPTY, reply_markup=admin_cancel_keyboard())
 	if len(name) > 25:
-		await message.answer(NAME_TOO_LONG,
-		                     reply_markup=admin_cancel_keyboard())
+		await message.answer(NAME_TOO_LONG, reply_markup=admin_cancel_keyboard())
 
 	# Чтение данных
 	data = await state.get_data()
@@ -167,17 +156,18 @@ async def check_name(message: Message, state: FSMContext):
 	success = await user_repo.add(user)
 	if success:
 		log.info(f"Пользователь {user.name} успешно добавлен в базу данных")
-		msg = USER_ADDED_SUCCESS.format(user_id=user_id, name=name, sep=SEP)
+		msg = USER_ADDED_SUCCESS.format(user_id=user_id, name=name)
 	else:
 		log.error(f"Ошибка при добавлении пользователя {user.name} в базу данных")
-		msg = USER_ADDED_ERROR.format(user_id=user_id, name=name, sep=SEP)
+		msg = USER_ADDED_ERROR.format(user_id=user_id, name=name)
 	await message.answer(msg, reply_markup=to_user_control_keyboard())
 
 
-# Запрос подтверждения на удаление
-@router.callback_query(F.data.startswith("delete_user_"))
+# Удаление пользователя. Запрос подтверждения
+@router.callback_query(F.data == "user_delete")
 async def ask_confirmation(callback: CallbackQuery, state: FSMContext):
-	user_id = int(callback.data.split("_")[-1])
+	data = await state.get_data()
+	user_id = data["user_id"]
 	log.debug(f"Запрос подтверждения на удаление пользователя {user_id}")
 
 	# Формирование запроса
@@ -189,13 +179,13 @@ async def ask_confirmation(callback: CallbackQuery, state: FSMContext):
 		USER_DELETE_CONFIRM.format(user_id=user_id, name=user.name),
 		reply_markup=admin_confirmation_keyboard()
 	)
-	await state.set_state(UserControlStates.confirm)
+	await state.set_state(UserControlStates.confirm_user_delete)
 
 
-# Подтверждение получено
-@router.callback_query(UserControlStates.confirm, F.data == "admin_ok")
+# Удаление пользователя. Подтверждение получено
+@router.callback_query(UserControlStates.confirm_user_delete, F.data == "admin_ok")
 async def confirmation_approved(callback: CallbackQuery, state: FSMContext):
-	log.debug("Подтверждение получено")
+	log.debug("Подтверждение удаления пользователя получено")
 
 	# Чтение операции
 	data = await state.get_data()
@@ -205,15 +195,49 @@ async def confirmation_approved(callback: CallbackQuery, state: FSMContext):
 	success = await user_repo.delete(user_id)
 	if success:
 		log.info(f"Пользователь {user.name} успешно удален из базы данных")
-		msg = USER_DELETED_SUCCESS.format(user_id=user_id, name=user.name, sep=SEP)
+		msg = USER_DELETED_SUCCESS
 	else:
 		log.error(f"Ошибка при удалении пользователя {user.name} из базы данных")
-		msg = USER_DELETED_ERROR.format(user_id=user_id, name=user.name, sep=SEP)
+		msg = USER_DELETED_ERROR
 
 	await callback.answer()
 	await callback.message.edit_text(msg, reply_markup=to_user_control_keyboard())
 	await state.clear()
 
+
+# Редактирование пользователя
+@router.callback_query(F.data == "user_edit")
+async def user_edit(callback: CallbackQuery, state: FSMContext):
+	data = await state.get_data()
+	user_id = data["user_id"]
+	log.debug(f"Редактирование пользователя {user_id}")
+
+	await callback.answer(FEATURE_IN_DEV)
+
+
+# =====================================================================================================================
+# ============================================= Блокировка ============================================================
+# =====================================================================================================================
+
+# Блокировка пользователя
+@router.callback_query(F.data == "user_block")
+async def user_block(callback: CallbackQuery, state: FSMContext):
+	log.debug("Блокировка пользователя")
+
+	await callback.answer(FEATURE_IN_DEV)
+
+
+# Разблокировка пользователя
+@router.callback_query(F.data == "user_unblock")
+async def user_unblock(callback: CallbackQuery, state: FSMContext):
+	log.debug("Разблокировка пользователя")
+
+	await callback.answer(FEATURE_IN_DEV)
+
+
+# =====================================================================================================================
+# ============================================= Регистрация ===========================================================
+# =====================================================================================================================
 
 # Регистрация подтверждена. Внесение пользователя в базу
 @router.callback_query(F.data.startswith("registration_approve_"))
@@ -257,33 +281,7 @@ async def reject_registration(callback: CallbackQuery):
 	user_id = int(callback.data.split("_")[-1])
 	log.debug(f"Админ отклонил регистрацию пользователя {user_id}")
 
-	msg = REG_REJECTED_USER
-
 	await callback.answer()
-	await callback.bot.send_message(chat_id=user_id, text=msg)
+	await callback.bot.send_message(chat_id=user_id, text=REG_REJECTED_USER)
 	await callback.message.edit_text(REG_REJECTED_ADMIN.format(user_id=user_id), reply_markup=None)
 
-
-# Редактирование пользователя
-@router.callback_query(F.data.startswith("edit_user_"))
-async def user_edit(callback: CallbackQuery, state: FSMContext):
-	user_id = int(callback.data.split("_")[-1])
-	log.debug(f"Редактирование пользователя {user_id}")
-
-	await callback.answer(FEATURE_IN_DEV)
-
-
-# Блокировка пользователя
-@router.callback_query(F.data == "user_block")
-async def user_block(callback: CallbackQuery, state: FSMContext):
-	log.debug("Блокировка пользователя")
-
-	await callback.answer(FEATURE_IN_DEV)
-
-
-# Разблокировка пользователя
-@router.callback_query(F.data == "user_unblock")
-async def user_unblock(callback: CallbackQuery, state: FSMContext):
-	log.debug("Разблокировка пользователя")
-
-	await callback.answer(FEATURE_IN_DEV)

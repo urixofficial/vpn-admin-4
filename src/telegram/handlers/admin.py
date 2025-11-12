@@ -34,12 +34,14 @@ async def admin_cancel(callback: CallbackQuery, state: FSMContext):
 # Вывод панели администратора
 @router.message(Command("admin"))
 @router.callback_query(F.data == "admin_panel")
-async def admin_panel(update: Message | CallbackQuery):
+async def admin_panel(update: Message | CallbackQuery, state: FSMContext):
 	log.debug("Вывод панели администратора")
 
 	if not is_admin(update):
 		await update.answer(ACCESS_DENIED)
 		return
+
+	await state.clear()
 
 	if isinstance(update, Message):
 		await update.answer(ADMIN_PANEL_TITLE, reply_markup=admin_panel_keyboard())
