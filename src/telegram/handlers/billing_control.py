@@ -68,7 +68,7 @@ async def show_tx_info(message: Message, state: FSMContext, tx: TransactionDTO):
 	await state.update_data(tx_id=tx.id) # для передачи ID в хэндлеры CRUD-операций
 
 
-# Вывод профиля транзакции. Ввод ID транзакции
+# Ввод ID транзакции
 @router.callback_query(F.data == "tx_show")
 async def ask_tx_id(callback: CallbackQuery, state: FSMContext):
 	log.debug("Запрос ID транзакции")

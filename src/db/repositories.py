@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Type, List
 from pydantic import BaseModel
-from sqlalchemy import select, delete, Update
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
@@ -8,8 +8,9 @@ from src.core.logger import log
 
 from src.db.database import connection
 from src.core.dto import (UserAddDTO, UserDTO, UserUpdateDTO, TransactionAddDTO, TransactionDTO, TransactionUpdateDTO,
-                          RegistrationAddDTO, RegistrationDTO, RegistrationUpdateDTO)
-from src.db.orm import Base, UserORM, TransactionORM, RegistrationORM
+                          RegistrationAddDTO, RegistrationDTO, RegistrationUpdateDTO, MessageAddDTO, MessageDTO,
+                          MessageUpdateDTO)
+from src.db.orm import Base, UserORM, TransactionORM, RegistrationORM, MessageORM
 
 AddDTO = TypeVar('AddDTO', bound=BaseModel)
 DTO = TypeVar('DTO', bound=BaseModel)
@@ -35,7 +36,7 @@ class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
 			await session.commit()
 			log.debug(f"OK, добавлен ID: {orm_instance.id}")
 			return orm_instance.id
-		except IntegrityError as e:
+		except IntegrityError:
 			log.error(f"Ошибка: запись с таким ключом уже существует")
 			return None
 		except Exception as e:
@@ -54,7 +55,7 @@ class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
 			await session.refresh(orm_object)
 			log.debug("OK")
 			return True
-		except NoResultFound as e:
+		except NoResultFound:
 			log.error(f"Запись с ID={record_id} не найдена")
 			return False
 		except Exception as e:
@@ -104,6 +105,11 @@ class BillingRepository(AbstractRepository[TransactionAddDTO, TransactionDTO, Tr
 		super().__init__(TransactionAddDTO, TransactionDTO, TransactionUpdateDTO, TransactionORM)
 
 
+class MessageRepository(AbstractRepository[MessageAddDTO, MessageDTO, MessageUpdateDTO, MessageORM]):
+	def __init__(self):
+		super().__init__(TransactionAddDTO, TransactionDTO, TransactionUpdateDTO, TransactionORM)
+
+
 class RegistrationRepo(AbstractRepository[RegistrationAddDTO, RegistrationDTO, RegistrationUpdateDTO, RegistrationORM]):
 	def __init__(self):
 		super().__init__(RegistrationAddDTO, RegistrationDTO, RegistrationUpdateDTO, RegistrationORM)
@@ -112,4 +118,5 @@ class RegistrationRepo(AbstractRepository[RegistrationAddDTO, RegistrationDTO, R
 
 user_repo = UserRepository()
 billing_repo = BillingRepository()
+messages_repo = MessageRepository()
 registration_repo = RegistrationRepo()

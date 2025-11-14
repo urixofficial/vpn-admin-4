@@ -38,6 +38,16 @@ class TransactionORM(Base):
 	updated_at: Mapped[date] = mapped_column(default=datetime.now)
 
 
+class MessageORM(Base):
+	__tablename__ = "messages"
+
+	id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+	recipient: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+	text: Mapped[str] = mapped_column(String(250))
+	created_at: Mapped[date] = mapped_column(default=datetime.now)
+	updated_at: Mapped[date] = mapped_column(default=datetime.now)
+
+
 class RegistrationORM(Base):
 	__tablename__ = "registration"
 
