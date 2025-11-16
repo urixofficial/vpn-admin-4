@@ -1,4 +1,4 @@
-# src/telegram/handlers/user.py
+# src/telegram/handlers/user_panel.py
 
 from datetime import date
 

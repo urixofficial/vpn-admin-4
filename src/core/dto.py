@@ -16,9 +16,9 @@ class UserStatus(Enum):
 class UserAddDTO(BaseModel):
 	id: int
 	name: str
-	billing_start_date: date
-	billing_end_date: date
-	blocked: bool
+	billing_start_date: date = date.today()
+	billing_end_date: date = date.today()
+	blocked: bool = False
 
 	model_config = ConfigDict(from_attributes=True)
 
@@ -54,8 +54,8 @@ class UserUpdateDTO(BaseModel):
 class TransactionAddDTO(BaseModel):
 	user_id: int
 	amount: int
-	created_at: datetime
-	updated_at: datetime
+	created_at: datetime = datetime.now()
+	updated_at: datetime = datetime.now()
 
 	model_config = ConfigDict(from_attributes=True)
 
@@ -88,9 +88,9 @@ class MessageStatus(Enum):
 class MessageAddDTO(BaseModel):
 	recipient: int
 	text: int
-	status: Enum
-	created_at: datetime
-	updated_at: datetime
+	status: Enum = MessageStatus.PENDING
+	created_at: datetime = datetime.now()
+	updated_at: datetime = datetime.now()
 
 	model_config = ConfigDict(from_attributes=True)
 

@@ -5,7 +5,9 @@ from aiogram.enums import ParseMode
 
 from src.core.config import settings
 from src.core.logger import log
-from src.telegram.handlers import user_router, admin_router, user_control_router, billing_control_router
+from src.telegram.handlers import user_router, admin_router
+from src.telegram.handlers.billing_handler import billing_crud
+from src.telegram.handlers.user_handler import user_crud
 
 
 class TelegramBot:
@@ -20,8 +22,8 @@ class TelegramBot:
 	def _register_handlers(self):
 
 		self.dp.include_router(admin_router)
-		self.dp.include_router(user_control_router)
-		self.dp.include_router(billing_control_router)
+		self.dp.include_router(user_crud.router)
+		self.dp.include_router(billing_crud.router)
 		self.dp.include_router(user_router)
 
 	async def start_polling(self):

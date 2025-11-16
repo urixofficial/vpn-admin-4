@@ -2,6 +2,20 @@
 
 from typing import Final
 
+# === Кнопки ===
+REGISTER_BUTTON: Final = "Зарегистрироваться"
+OK_BUTTON: Final = "OK"
+CANCEL_BUTTON: Final = "Отмена"
+BACK_BUTTON: Final = "🔙 Назад"
+MAIN_PAGE_BUTTON: Final = "На главную"
+USERS_PAGE_BUTTON: Final = "👤 Пользователи"
+BILLING_PAGE_BUTTON: Final = "💰 Биллинг"
+STATS_PAGE_BUTTON: Final = "📊 Статистика"
+LIST_BUTTON: Final = "📋 Список"
+SHOW_PROFILE_BUTTON: Final = "🔍️ Профиль"
+ADD_BUTTON: Final = "➕ Добавить"
+EDIT_BUTTON: Final = "✏️ Изменить"
+DELETE_BUTTON: Final = "❌ Удалить"
 
 # === В разработке ===
 FEATURE_IN_DEV: Final = "Функция в разработке"
@@ -17,13 +31,6 @@ ACCESS_DENIED: Final = "Доступ запрещён."
 ADMIN_PANEL_TITLE: Final = "Панель администратора:"
 USER_CONTROL_TITLE: Final = "Управление пользователями:"
 BILLING_CONTROL_TITLE: Final = "Управление биллингом:"
-
-# === CRUD-операции ===
-ADD_BUTTON: Final = "➕ Изменить"
-EDIT_BUTTON: Final = "✏️ Изменить"
-DELETE_BUTTON: Final = "❌ Удалить"
-BACK_BUTTON: Final = "🔙 Назад"
-
 
 # =====================================================================================================================
 # ============================================= Пользователи ==========================================================
@@ -51,11 +58,10 @@ USER_LIST_ROW: Final = "{status} {name} ({user_id})\n"
 
 # === Профиль пользователя ===
 USER_PROFILE_TEMPLATE: Final = (
-    "<b>{name}</b> ({user_id})\n"
-    "{sep}\n"
-    "Статус: {status}\n"
-    "Начало: {start_date}\n"
-    "Конец: {end_date}\n"
+    "<b>{name}</b> ({id})\n"
+    "Статус: {blocked}\n"
+    "Начало: {billing_start_date}\n"
+    "Конец: {billing_end_date}\n"
 )
 
 # === Статусы ===
