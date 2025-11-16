@@ -5,8 +5,8 @@ from src.core.dto import UserAddDTO, UserDTO, UserStatus
 from src.telegram.keyboards import to_user_control_keyboard, user_profile_keyboard
 from src.telegram.interface import (
 	USER_LIST_HEADER, USER_LIST_ROW, USER_PROFILE_TEMPLATE,
-	ENTER_USER_ID, ENTER_NAME, USER_ID_NOT_NUMBER, NAME_EMPTY, NAME_TOO_LONG, USER_LIST_STATUS_ACTIVE,
-	USER_LIST_STATUS_INACTIVE
+	ENTER_USER_ID, ENTER_USER_NAME, USER_LIST_STATUS_ACTIVE, USER_LIST_STATUS_INACTIVE, ID_INVALID,
+	NAME_INVALID
 )
 
 class UserCRUDHandler(BaseCRUDHandler[UserAddDTO, UserDTO, AbstractRepository]):
@@ -24,11 +24,11 @@ class UserCRUDHandler(BaseCRUDHandler[UserAddDTO, UserDTO, AbstractRepository]):
 	add_fields = ["id", "name"]
 	field_prompts = {
 		"id": ENTER_USER_ID,
-		"name": ENTER_NAME
+		"name": ENTER_USER_NAME
 	}
 	field_validators = {
-		"id": lambda x: (x.isdigit(), USER_ID_NOT_NUMBER),
-		"name": lambda x: (len(x) > 0, NAME_EMPTY) if len(x) == 0 else (len(x) <= 25, NAME_TOO_LONG)
+		"id": lambda x: (x.isdigit(), ID_INVALID),
+		"name": lambda x: (len(x) > 2, NAME_INVALID) if len(x) == 0 else (len(x) <= 25, NAME_INVALID)
 	}
 
 	def get_entity_id(self, item: UserDTO) -> int:

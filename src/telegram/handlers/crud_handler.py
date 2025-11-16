@@ -15,6 +15,8 @@ from pydantic import BaseModel
 
 from src.core.logger import log
 from src.db.repositories import AbstractRepository
+from src.telegram.interface import DELETE_CONFIRM, DELETE_SUCCESS, DELETE_ERROR, ADD_SUCCESS, ADD_ERROR, INVALID_VALUE, \
+	ENTER_ID, INVALID_ID, NOT_FOUND, LIST_EMPTY
 from src.telegram.keyboards import admin_cancel_keyboard, admin_confirmation_keyboard
 
 AddDTO = TypeVar("AddDTO", bound=BaseModel)
@@ -93,14 +95,14 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 			items = await self.repo.get_all()
 			if not items:
 				await callback.message.edit_text(
-					f"Список {self.entity_name} пуст", reply_markup=self.back_keyboard
+					LIST_EMPTY, reply_markup=self.back_keyboard
 				)
 				await callback.answer()
 				return
 
-			text = self.list_header + "\n"
+			text = self.list_header
 			for item in items:
-				text += self.format_list_row(item) + "\n"
+				text += self.format_list_row(item)
 
 			await callback.message.edit_text(text, reply_markup=self.back_keyboard)
 			await callback.answer()
@@ -113,7 +115,7 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 			log.debug(f"Вывод профиля {self.entity_name.capitalize()}. Запрос ID")
 			await state.clear()
 			await callback.message.edit_text(
-				f"Введите {self.entity_name.capitalize()} ID:", reply_markup=admin_cancel_keyboard()
+				ENTER_ID, reply_markup=admin_cancel_keyboard()
 			)
 			await state.set_state(self.states.enter_show_id)
 			await state.update_data(action="show")
@@ -125,17 +127,15 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 
 			data = await state.get_data()
 			action = data.get("action")
-			log.debug(f"Действие: {action}")
 
 			if action != "show":
-				log.debug(f"Неверное действие: {action}")
 				return
 
 			try:
 				item_id = int(message.text)
 			except ValueError:
 				await message.answer(
-					f"Некорректный {self.entity_name.capitalize()} ID. Введите ID:",
+					INVALID_ID,
 					reply_markup=self.back_keyboard,
 				)
 				return
@@ -143,7 +143,7 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 			item = await self.repo.get_by_id(item_id)
 			if not item:
 				await message.answer(
-					f"{self.entity_name.capitalize()} не найден",
+					NOT_FOUND,
 					reply_markup=self.back_keyboard,
 				)
 				await state.clear()
@@ -183,7 +183,7 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 			valid, error = validator(value)
 			if not valid:
 				await message.answer(
-	                error or "Неверное значение", reply_markup=admin_cancel_keyboard()
+	                error or INVALID_VALUE, reply_markup=admin_cancel_keyboard()
 	            )
 				return
 
@@ -212,12 +212,12 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 				if result_id:
 					log.debug(f"{self.entity_name.capitalize()} успешно добавлен в БД с ID: {result_id}")
 					await message.answer(
-						"Успешно добавлено!", reply_markup=self.back_keyboard
+						ADD_SUCCESS, reply_markup=self.back_keyboard
 					)
 				else:
 					log.debug(f"Ошибка при добавлении записи {self.entity_name.capitalize()} в БД")
 					await message.answer(
-						"Ошибка при добавлении", reply_markup=self.back_keyboard
+						ADD_ERROR, reply_markup=self.back_keyboard
 					)
 			except Exception as e:
 				log.debug(f"Ошибка: {e}")
@@ -233,13 +233,13 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 			data = await state.get_data()
 			item_id = data.get("current_id")
 			if not item_id:
-				await callback.answer("Сначала выберите элемент", show_alert=True)
+				log.error("Отсутствует текущий ID для удаления в state data")
 				return
 
 			item = await self.repo.get_by_id(item_id)
 			name = getattr(item, "name", getattr(item, "id", item_id))
 			await callback.message.edit_text(
-	            f"Удалить {self.entity_name} `{name}`?",
+	            callback.message.text + DELETE_CONFIRM,
 	            reply_markup=admin_confirmation_keyboard(),
 	            parse_mode="Markdown",
 	        )
@@ -252,8 +252,8 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 			item_id = data.get("current_id")
 			success = await self.repo.delete(item_id)
 			await callback.message.edit_text(
-	            "Удалено!" if success else "Ошибка удаления",
-	            reply_markup=self.back_keyboard,
-	        )
+				DELETE_SUCCESS if success else DELETE_ERROR,
+				reply_markup=self.back_keyboard,
+			)
 			await state.clear()
 			await callback.answer()
