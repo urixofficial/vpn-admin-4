@@ -144,7 +144,7 @@ def billing_control_keyboard():
 		]
 	)
 
-def profile_keyboard():
+def user_profile_keyboard():
 	return InlineKeyboardMarkup(
 		inline_keyboard=[
 			[
@@ -153,6 +153,20 @@ def profile_keyboard():
 			],
 			[
 				InlineKeyboardButton(text=BACK_BUTTON, callback_data="user_control")
+			]
+
+		]
+	)
+
+def tx_profile_keyboard():
+	return InlineKeyboardMarkup(
+		inline_keyboard=[
+			[
+				InlineKeyboardButton(text=EDIT_BUTTON, callback_data="tx_edit"),
+				InlineKeyboardButton(text=DELETE_BUTTON, callback_data="tx_delete")
+			],
+			[
+				InlineKeyboardButton(text=BACK_BUTTON, callback_data="tx_control")
 			]
 
 		]

@@ -2,7 +2,7 @@
 from src.telegram.handlers.crud_handler import BaseCRUDHandler
 from src.db.repositories import billing_repo, AbstractRepository
 from src.core.dto import TransactionAddDTO, TransactionDTO
-from src.telegram.keyboards import to_billing_control_keyboard, profile_keyboard
+from src.telegram.keyboards import to_billing_control_keyboard, tx_profile_keyboard
 from src.telegram.interface import (
     TX_LIST_HEADER, TX_ROW_TEMPLATE, TX_PROFILE_TEMPLATE,
     ENTER_USER_ID, ENTER_AMOUNT, AMOUNT_INVALID, AMOUNT_INVALID_RULE
@@ -18,7 +18,7 @@ class BillingCRUDHandler(BaseCRUDHandler[TransactionAddDTO, TransactionDTO, Abst
     list_row_template = TX_ROW_TEMPLATE
     profile_template = TX_PROFILE_TEMPLATE
     back_keyboard = to_billing_control_keyboard()
-    profile_keyboard = profile_keyboard()
+    profile_keyboard = tx_profile_keyboard()
 
     add_fields = ["user_id", "amount"]
     field_prompts = {

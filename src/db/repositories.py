@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
+from datetime import date
+from dateutil.relativedelta import relativedelta
 
 from src.core.logger import log
 
@@ -34,7 +36,7 @@ class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
 			session.add(orm_instance)
 			await session.flush()  # Получаем ID без коммита
 			await session.commit()
-			log.debug(f"OK, добавлен ID: {orm_instance.id}")
+			log.debug(f"OK, ID: {orm_instance.id}")
 			return orm_instance.id
 		except IntegrityError:
 			log.error(f"Ошибка: запись с таким ключом уже существует")
@@ -45,7 +47,7 @@ class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
 
 	@connection
 	async def update(self, record_id: int, update_dto: DTOUpdate, session: AsyncSession) -> bool:
-		log.debug(f"Обновление записи с ID={record_id}: в таблице '{self.orm_model.__tablename__}'")
+		log.debug(f"Обновление записи {record_id}: в таблице '{self.orm_model.__tablename__}'")
 		try:
 			orm_object = await session.get(self.orm_model, record_id)
 			update_data = update_dto.model_dump(exclude_unset=True)
@@ -56,7 +58,7 @@ class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
 			log.debug("OK")
 			return True
 		except NoResultFound:
-			log.error(f"Запись с ID={record_id} не найдена")
+			log.error(f"Запись {record_id} не найдена")
 			return False
 		except Exception as e:
 			log.error(f"Ошибка: {e}")
@@ -65,7 +67,7 @@ class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
 	@connection
 	async def delete(self, record_id: int, session: AsyncSession) -> bool:
 		try:
-			log.debug(f"Удаление записи c ID={record_id} из таблицы: '{self.orm_model.__tablename__}'")
+			log.debug(f"Удаление записи {record_id} из таблицы: '{self.orm_model.__tablename__}'")
 			query = delete(self.orm_model).where(self.orm_model.id == record_id)
 			result = await session.execute(query)
 			await session.commit()
@@ -87,7 +89,7 @@ class AbstractRepository(Generic[AddDTO, DTO, ORM, DTOUpdate]):
 
 	@connection
 	async def get_by_id(self, record_id: int, session: AsyncSession) -> DTO | None:
-		log.debug(f"Получение записи с ID='{record_id} из таблицы '{self.orm_model.__tablename__}'")
+		log.debug(f"Получение записи '{record_id} из таблицы '{self.orm_model.__tablename__}'")
 		orm_object = await session.get(self.orm_model, record_id)
 		if not orm_object:
 			return None
@@ -103,6 +105,74 @@ class UserRepository(AbstractRepository[UserAddDTO, UserDTO, UserUpdateDTO, User
 class BillingRepository(AbstractRepository[TransactionAddDTO, TransactionDTO, TransactionUpdateDTO, TransactionORM]):
 	def __init__(self):
 		super().__init__(TransactionAddDTO, TransactionDTO, TransactionUpdateDTO, TransactionORM)
+
+	@connection
+	async def add(self, dto: TransactionAddDTO, session: AsyncSession) -> int | None:
+		log.debug(f"Добавление транзакции: '{dto}' и обновление billing_end_date")
+		try:
+			# 1. Добавляем транзакцию
+			orm_instance = TransactionORM(**dto.model_dump())
+			session.add(orm_instance)
+			await session.flush()
+
+			# 2. Пересчитываем billing_end_date
+			months_to_add = dto.amount // 100
+			if months_to_add > 0:
+				user = await session.get(UserORM, dto.user_id)
+				if user:
+					current_end = max(date.today(), user.billing_end_date)
+					user.billing_end_date = current_end + relativedelta(months=months_to_add)
+					log.debug(
+						f"Продление подписки для {user.name}: +{months_to_add} мес. → {user.billing_end_date}")
+
+			await session.commit()
+			log.debug(f"OK, ID транзакции: {orm_instance.id}")
+			return orm_instance.id
+
+		except IntegrityError:
+			await session.rollback()
+			log.error("Ошибка: нарушение целостности данных")
+			return None
+		except Exception as e:
+			await session.rollback()
+			log.error(f"Ошибка: {e}")
+			return None
+
+	@connection
+	async def delete(self, record_id: int, session: AsyncSession) -> bool:
+		log.debug(f"Удаление транзакции {record_id} и пересчёт billing_end_date")
+		try:
+			# 1. Получаем транзакцию
+			transaction = await session.get(TransactionORM, record_id)
+			if not transaction:
+				log.error(f"Транзакция {record_id} не найдена")
+				return False
+
+			user_id = transaction.user_id
+			amount = transaction.amount
+			months_to_subtract = amount // 100
+
+			# 2. Удаляем транзакцию
+			await session.delete(transaction)
+
+			# 3. Пересчитываем billing_end_date
+			if months_to_subtract > 0:
+				# Перезагружаем пользователя
+				user = await session.get(UserORM, user_id)
+				if user:
+					user.billing_end_date = user.billing_end_date - relativedelta(months=months_to_subtract)
+					log.debug(
+						f"Сокращение подписки для {user.name}: -{months_to_subtract} мес. → {user.billing_end_date}"
+					)
+
+			await session.commit()
+			log.debug("OK")
+			return True
+
+		except Exception as e:
+			await session.rollback()
+			log.error(f"Ошибка: {e}")
+			return False
 
 
 class MessageRepository(AbstractRepository[MessageAddDTO, MessageDTO, MessageUpdateDTO, MessageORM]):

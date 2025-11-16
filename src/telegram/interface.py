@@ -58,10 +58,12 @@ USER_LIST_ROW: Final = "{status} {name} ({user_id})\n"
 
 # === Профиль пользователя ===
 USER_PROFILE_TEMPLATE: Final = (
-    "<b>{name}</b> ({id})\n"
-    "Статус: {blocked}\n"
-    "Начало: {billing_start_date}\n"
-    "Конец: {billing_end_date}\n"
+    "<b>{name}</b>\n"
+    "-----------------------------------\n"
+    "🆔 {id}\n"
+    "🚫 {blocked}\n"
+    "🗓️ {billing_start_date}\n"
+    "🗓️ {billing_end_date}\n"
 )
 
 # === Статусы ===
@@ -95,10 +97,10 @@ TX_ROW_TEMPLATE: Final = "🆔 {tx_id:03d}  💰{amount: 5d}  👤 {name}\n"
 
 # === Профиль пользователя ===
 TX_PROFILE_TEMPLATE: Final = (
-    "Транзакция <b>{tx_id}</b>\n"
-    "{sep}\n"
+    "<b>Транзакция {id}</b>\n"
+    "-----------------------------------\n"
     "Сумма: {amount}\n"
-    "Пользователь: {name}\n"
+    "ID пользователя: {user_id}\n"
     "Создана: {created_at}\n"
     "Обновлена: {updated_at}\n"
 )

@@ -1,7 +1,6 @@
 # src/telegram/crud_handler.py
 from abc import ABC, abstractmethod
 from typing import (
-	Protocol,
 	Generic,
 	TypeVar,
 	Callable,
@@ -21,9 +20,6 @@ from src.telegram.keyboards import admin_cancel_keyboard, admin_confirmation_key
 AddDTO = TypeVar("AddDTO", bound=BaseModel)
 DTO = TypeVar("DTO", bound=BaseModel)
 RepoT = TypeVar("RepoT", bound=AbstractRepository)
-
-
-
 
 
 class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
@@ -197,31 +193,36 @@ class BaseCRUDHandler(Generic[AddDTO, DTO, RepoT], ABC):
 
 			step += 1
 			if step >= len(self.add_fields):
-				# Создаём DTO и сохраняем
-				try:
-					dto = self.add_dto_class(**fields)
-					result_id = await self.repo.add(dto)
-					if result_id:
-						log.debug(f"Запись {result_id} успешно добавлена в БД")
-						await message.answer(
-	                        "Успешно добавлено!", reply_markup=self.back_keyboard
-	                    )
-					else:
-						log.debug(f"Ошибка при добавлении записи {result_id} в БД")
-						await message.answer(
-	                        "Ошибка при добавлении", reply_markup=self.back_keyboard
-	                    )
-				except Exception as e:
-					log.debug(f"Ошибка: {e}")
-					await message.answer(
-	                    f"Ошибка: {e}", reply_markup=self.back_keyboard
-	                )
+				# Сохранение
+				await add_item_to_db(message, fields)
 				await state.clear()
 			else:
 				await state.update_data(fields=fields, step=step)
 				next_field = self.add_fields[step]
 				await message.answer(
 					self.field_prompts[next_field], reply_markup=admin_cancel_keyboard()
+				)
+
+		async def add_item_to_db(message: Message, fields: dict):
+			log.debug(f"Сохранение {self.entity_name} в БД")
+
+			try:
+				dto = self.add_dto_class(**fields)
+				result_id = await self.repo.add(dto)
+				if result_id:
+					log.debug(f"{self.entity_name.capitalize()} успешно добавлен в БД с ID: {result_id}")
+					await message.answer(
+						"Успешно добавлено!", reply_markup=self.back_keyboard
+					)
+				else:
+					log.debug(f"Ошибка при добавлении записи {self.entity_name.capitalize()} в БД")
+					await message.answer(
+						"Ошибка при добавлении", reply_markup=self.back_keyboard
+					)
+			except Exception as e:
+				log.debug(f"Ошибка: {e}")
+				await message.answer(
+					f"Ошибка: {e}", reply_markup=self.back_keyboard
 				)
 
 	# === Удаление ===

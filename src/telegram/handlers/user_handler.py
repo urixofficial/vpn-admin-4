@@ -2,7 +2,7 @@
 from src.telegram.handlers.crud_handler import BaseCRUDHandler
 from src.db.repositories import user_repo, AbstractRepository
 from src.core.dto import UserAddDTO, UserDTO, UserStatus
-from src.telegram.keyboards import to_user_control_keyboard, profile_keyboard
+from src.telegram.keyboards import to_user_control_keyboard, user_profile_keyboard
 from src.telegram.interface import (
 	USER_LIST_HEADER, USER_LIST_ROW, USER_PROFILE_TEMPLATE,
 	ENTER_USER_ID, ENTER_NAME, USER_ID_NOT_NUMBER, NAME_EMPTY, NAME_TOO_LONG, USER_LIST_STATUS_ACTIVE,
@@ -19,7 +19,7 @@ class UserCRUDHandler(BaseCRUDHandler[UserAddDTO, UserDTO, AbstractRepository]):
 	list_row_template = USER_LIST_ROW
 	profile_template = USER_PROFILE_TEMPLATE
 	back_keyboard = to_user_control_keyboard()
-	profile_keyboard = profile_keyboard()
+	profile_keyboard = user_profile_keyboard()
 
 	add_fields = ["id", "name"]
 	field_prompts = {
