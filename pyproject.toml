@@ -1,0 +1,7 @@
+[project]
+name = "vpn-admin-4"
+version = "0.1.0"
+description = "App to control VPN server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
