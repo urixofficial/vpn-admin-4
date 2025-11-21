@@ -9,18 +9,18 @@ from src.db.orm import Base
 engine = create_async_engine(settings.get_db_url)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
+# Контроль миграций БД теперь выполняется с помощью alembic
+# async def init_db():
+# 	log.debug(f"Инициализация базы данных: '{settings.DB_PATH}'")
+# 	try:
+# 		async with engine.begin() as conn:
+# 			# await conn.run_sync(Base.metadata.drop_all)
+# 			await conn.run_sync(Base.metadata.create_all)
+# 		log.debug("OK")
+# 	except Exception as e:
+# 		log.error(f"Ошибка: {e}")
 
-async def init_db():
-	log.debug(f"Инициализация базы данных: '{settings.DB_PATH}'")
-	try:
-		async with engine.begin() as conn:
-			# await conn.run_sync(Base.metadata.drop_all)
-			await conn.run_sync(Base.metadata.create_all)
-		log.debug("OK")
-	except Exception as e:
-		log.error(f"Ошибка: {e}")
-
-
+# Декоратор для передачи подключений
 def connection(method):
 	async def wrapper(*args, **kwargs):
 		async with async_session() as new_session:
