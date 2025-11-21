@@ -27,7 +27,7 @@ class UserCRUDHandler(BaseCRUDHandler[UserAddDTO, UserDTO, AbstractRepository]):
 		"name": ENTER_USER_NAME
 	}
 	field_validators = {
-		"id": lambda x: (x.isdigit(), ID_INVALID),
+		"id": lambda x: (x.isdigit() and x > 0, ID_INVALID),
 		"name": lambda x: (len(x) > 2, NAME_INVALID) if len(x) == 0 else (len(x) <= 25, NAME_INVALID)
 	}
 
